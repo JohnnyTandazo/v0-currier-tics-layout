@@ -104,6 +104,12 @@ export function AppSidebar({ user, currentRole, currentClientView, onRoleChange,
         case "Pagos":
           onClientViewChange("pagos")
           break
+        case "Notificaciones":
+          onClientViewChange("notificaciones")
+          break
+        case "Configuración":
+          onClientViewChange("configuracion")
+          break
       }
     }
   }
@@ -118,6 +124,10 @@ export function AppSidebar({ user, currentRole, currentClientView, onRoleChange,
         return "facturas"
       case "Pagos":
         return "pagos"
+      case "Notificaciones":
+        return "notificaciones"
+      case "Configuración":
+        return "configuracion"
       default:
         return null
     }
@@ -209,7 +219,10 @@ export function AppSidebar({ user, currentRole, currentClientView, onRoleChange,
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton>
+                <SidebarMenuButton 
+                  isActive={currentRole === "client" && currentClientView === "notificaciones"}
+                  onClick={() => handleMenuClick("Notificaciones")}
+                >
                   <Bell className="h-4 w-4" />
                   <span>Notificaciones</span>
                   <Badge
@@ -221,7 +234,10 @@ export function AppSidebar({ user, currentRole, currentClientView, onRoleChange,
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton>
+                <SidebarMenuButton 
+                  isActive={currentRole === "client" && currentClientView === "configuracion"}
+                  onClick={() => handleMenuClick("Configuración")}
+                >
                   <Settings className="h-4 w-4" />
                   <span>Configuración</span>
                 </SidebarMenuButton>

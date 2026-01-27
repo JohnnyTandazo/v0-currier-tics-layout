@@ -8,6 +8,8 @@ import { TrackingTimeline } from "@/components/dashboards/tracking-timeline"
 import { MisEnvios } from "@/components/dashboards/mis-envios"
 import { Facturas } from "@/components/dashboards/facturas"
 import { Pagos } from "@/components/dashboards/pagos"
+import { Notificaciones } from "@/components/dashboards/notificaciones"
+import { Configuracion } from "@/components/dashboards/configuracion"
 import {
   SidebarProvider,
   SidebarInset,
@@ -46,6 +48,8 @@ const clientViewLabels: Record<ClientView, string> = {
   envios: "Mis Envios",
   facturas: "Facturas",
   pagos: "Pagos",
+  notificaciones: "Notificaciones",
+  configuracion: "Configuración",
 }
 
 export default function DashboardLayout({
@@ -97,6 +101,12 @@ export default function DashboardLayout({
           )}
           {currentRole === "client" && currentClientView === "pagos" && (
             <Pagos />
+          )}
+          {currentRole === "client" && currentClientView === "notificaciones" && (
+            <Notificaciones />
+          )}
+          {currentRole === "client" && currentClientView === "configuracion" && (
+            <Configuracion />
           )}
           {currentRole === "operator" && <OperatorDashboard />}
           {currentRole === "tracking" && (
