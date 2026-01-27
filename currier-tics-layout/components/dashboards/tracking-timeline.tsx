@@ -37,30 +37,49 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Datos simulados para prueba
+  const MOCK_PACKAGE = {
+    id: 1,
+    trackingNumber: trackingId,
+    descripcion: "Laptop Gamer - Dell XPS 15 (Simulado)",
+    pesoLibras: 8.5,
+    precio: 1299.99,
+    estado: "ADUANA",
+    usuario: {
+      nombre: "Juan Pérez",
+    },
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+  }
+
+  // Simulación de historial de seguimiento
+  const MOCK_EVENTS = [
+    { fecha: "25 de Oct 2024", hora: "09:30 AM", evento: "Paquete Pre-alertado", ubicacion: "Miami, FL" },
+    { fecha: "25 de Oct 2024", hora: "02:15 PM", evento: "Recibido en Miami", ubicacion: "Miami, FL" },
+    { fecha: "26 de Oct 2024", hora: "10:45 AM", evento: "Despachado a Ecuador", ubicacion: "Miami, FL" },
+    { fecha: "27 de Oct 2024", hora: "04:30 PM", evento: "Llegada a Guayaquil", ubicacion: "Guayaquil, EC" },
+  ]
+
   useEffect(() => {
     const fetchPackage = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/paquetes")
-        if (!response.ok) throw new Error("Error al obtener paquetes")
-        const paquetes = await response.json()
+        // Comentado: Conectar al backend cuando esté disponible
+        // const response = await fetch("http://localhost:8080/api/paquetes")
+        // if (!response.ok) throw new Error("Error al obtener paquetes")
+        // const paquetes = await response.json()
 
-        // Find package by trackingNumber (case-insensitive)
-        const found = paquetes.find((p: any) => {
-          const tn = String(p.trackingNumber || "").toLowerCase()
-          return tn === trackingId.toLowerCase()
-        })
+        // Simulación: delay de 1 segundo para parecer que procesa
+        await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        if (found) {
-          setPackageData(found)
-          setError(null)
-        } else {
-          setError("Paquete no encontrado")
-          setPackageData(null)
-        }
+        // Simular éxito: Usar datos mock
+        console.log("✅ Usando datos simulados de seguimiento para:", trackingId)
+        setPackageData(MOCK_PACKAGE)
+        setError(null)
       } catch (err) {
         console.error("Error fetching package:", err)
-        setError("Error al cargar los datos del paquete")
-        setPackageData(null)
+        // Si falla el fetch real, también usar mock data
+        console.log("⚠️ Backend no disponible, usando datos simulados")
+        setPackageData(MOCK_PACKAGE)
+        setError(null)
       } finally {
         setIsLoading(false)
       }
