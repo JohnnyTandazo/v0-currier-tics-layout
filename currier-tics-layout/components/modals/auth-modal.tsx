@@ -67,31 +67,33 @@ export function AuthModal({
           window.location.reload()
         }, 500)
       } else {
-        // REGISTER: POST to /api/usuarios/registro
-        const response = await fetch("http://localhost:8080/api/usuarios/registro", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nombre: fullName,
-            email,
-            password,
-            telefono: phone,
-            rol: "CLIENTE",
-          }),
-        })
+        // REGISTER: Simulación de registro exitoso (Backend no disponible)
+        // TODO: Reemplazar con fetch real cuando el backend esté disponible
+        
+        // Simulamos un delay de 1500ms para parecer que procesa
+        await new Promise((resolve) => setTimeout(resolve, 1500))
 
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}))
-          throw new Error(error.message || "No se pudo crear la cuenta")
+        // Datos simulados del usuario registrado
+        const mockUser = {
+          id: Math.random(),
+          nombre: fullName,
+          email: email,
+          telefono: phone,
+          rol: "CLIENTE",
         }
 
-        const data = await response.json()
-        console.log("Cuenta creada:", data)
+        // Guardar en localStorage (simulación de token y usuario)
+        localStorage.setItem("currier_token", "token-demo-registro")
+        localStorage.setItem("usuario", JSON.stringify(mockUser))
 
-        // Auto-login: save and reload
-        localStorage.setItem("usuario", JSON.stringify(data))
-        alert("¡Cuenta creada exitosamente! Iniciando sesión...")
+        console.log("✅ Cuenta creada (simulada):", mockUser)
+
+        // Mostrar mensaje de éxito
+        alert("¡Cuenta creada con éxito! Bienvenido al sistema.")
+
+        // Cerrar modal y redirigir al dashboard
         onSuccess()
+        resetForm()
         setTimeout(() => {
           window.location.reload()
         }, 500)
