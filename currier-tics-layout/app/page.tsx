@@ -6,6 +6,9 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { ClientDashboard } from "@/components/dashboards/client-dashboard"
 import { OperatorDashboard } from "@/components/dashboards/operator-dashboard"
 import { TrackingTimeline } from "@/components/dashboards/tracking-timeline"
+import { MisEnvios } from "@/components/dashboards/mis-envios"
+import { Facturas } from "@/components/dashboards/facturas"
+import { Pagos } from "@/components/dashboards/pagos"
 import {
   SidebarProvider,
   SidebarInset,
@@ -20,10 +23,12 @@ import {
 } from "@/components/ui/breadcrumb"
 
 export type UserRole = "client" | "operator" | "tracking"
+export type ClientView = "dashboard" | "envios" | "facturas" | "pagos"
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [currentRole, setCurrentRole] = useState<UserRole>("client")
+  const [currentClientView, setCurrentClientView] = useState<ClientView>("dashboard")
   const [selectedTrackingId, setSelectedTrackingId] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
 
@@ -57,6 +62,7 @@ export default function Home() {
   const handleLogout = () => {
     setIsLoggedIn(false)
     setCurrentRole("client")
+    setCurrentClientView("dashboard")
     setUser(null)
     localStorage.removeItem("usuario")
   }
@@ -71,10 +77,24 @@ export default function Home() {
     setSelectedTrackingId(null)
   }
 
+  const handleClientViewChange = (view: ClientView) => {
+    setCurrentClientView(view)
+    if (currentRole !== "client") {
+      setCurrentRole("client")
+    }
+  }
+
   const roleLabels: Record<UserRole, string> = {
     client: "Panel del Cliente",
     operator: "Operador / Bodega",
     tracking: "Seguimiento de Envío",
+  }
+
+  const clientViewLabels: Record<ClientView, string> = {
+    dashboard: "Panel Principal",
+    envios: "Mis Envíos",
+    facturas: "Facturas",
+    pagos: "Pagos",
   }
 
   // Show Landing Page if not logged in
@@ -88,7 +108,9 @@ export default function Home() {
       <AppSidebar 
         user={user}
         currentRole={currentRole} 
+        currentClientView={currentClientView}
         onRoleChange={setCurrentRole}
+        onClientViewChange={handleClientViewChange}
         onLogout={handleLogout}
       />
       <SidebarInset>
@@ -99,15 +121,26 @@ export default function Home() {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbPage className="font-medium">
-                  {roleLabels[currentRole]}
+                  {currentRole === "client" 
+                    ? clientViewLabels[currentClientView] 
+                    : roleLabels[currentRole]}
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
-          {currentRole === "client" && (
+          {currentRole === "client" && currentClientView === "dashboard" && (
             <ClientDashboard onViewTracking={handleViewTracking} />
+          )}
+          {currentRole === "client" && currentClientView === "envios" && (
+            <MisEnvios onViewDetails={handleViewTracking} />
+          )}
+          {currentRole === "client" && currentClientView === "facturas" && (
+            <Facturas />
+          )}
+          {currentRole === "client" && currentClientView === "pagos" && (
+            <Pagos />
           )}
           {currentRole === "operator" && <OperatorDashboard />}
           {currentRole === "tracking" && (

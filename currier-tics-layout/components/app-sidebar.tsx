@@ -38,21 +38,22 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import type { UserRole } from "@/app/page"
+import type { UserRole, ClientView } from "@/app/page"
 
 interface AppSidebarProps {
   user: any
   currentRole: UserRole
+  currentClientView: ClientView
   onRoleChange: (role: UserRole) => void
+  onClientViewChange: (view: ClientView) => void
   onLogout: () => void
 }
 
-const clientNavItems = [
-  { title: "Panel Principal", icon: Home, badge: null },
-  { title: "Mis Paquetes", icon: Package, badge: "12" },
-  { title: "Envíos", icon: Truck, badge: "3" },
-  { title: "Facturas", icon: FileText, badge: null },
-  { title: "Pagos", icon: DollarSign, badge: null },
+const clientNavItems: { title: string; icon: any; badge: string | null; view: ClientView }[] = [
+  { title: "Panel Principal", icon: Home, badge: null, view: "dashboard" },
+  { title: "Mis Envíos", icon: Truck, badge: "3", view: "envios" },
+  { title: "Facturas", icon: FileText, badge: null, view: "facturas" },
+  { title: "Pagos", icon: DollarSign, badge: null, view: "pagos" },
 ]
 
 const operatorNavItems = [
@@ -67,17 +68,22 @@ const trackingNavItems = [
   { title: "Todos los Envíos", icon: Package, badge: null },
 ]
 
-export function AppSidebar({ user, currentRole, onRoleChange, onLogout }: AppSidebarProps) {
+export function AppSidebar({ 
+  user, 
+  currentRole, 
+  currentClientView,
+  onRoleChange, 
+  onClientViewChange,
+  onLogout 
+}: AppSidebarProps) {
   const getNavItems = () => {
     switch (currentRole) {
-      case "client":
-        return clientNavItems
       case "operator":
         return operatorNavItems
       case "tracking":
         return trackingNavItems
       default:
-        return clientNavItems
+        return []
     }
   }
 
@@ -139,29 +145,60 @@ export function AppSidebar({ user, currentRole, onRoleChange, onLogout }: AppSid
 
         <SidebarSeparator />
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Navegación</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {getNavItems().map((item, index) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton isActive={index === 0}>
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                    {item.badge && (
-                      <Badge
-                        variant="secondary"
-                        className="ml-auto bg-primary/20 text-primary-foreground text-xs"
-                      >
-                        {item.badge}
-                      </Badge>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {currentRole === "client" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Navegación</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {clientNavItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      isActive={currentClientView === item.view}
+                      onClick={() => onClientViewChange(item.view)}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                      {item.badge && (
+                        <Badge
+                          variant="secondary"
+                          className="ml-auto bg-primary/20 text-primary-foreground text-xs"
+                        >
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {currentRole !== "client" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Navegación</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {getNavItems().map((item, index) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton isActive={index === 0}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                      {item.badge && (
+                        <Badge
+                          variant="secondary"
+                          className="ml-auto bg-primary/20 text-primary-foreground text-xs"
+                        >
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         <SidebarSeparator />
 
