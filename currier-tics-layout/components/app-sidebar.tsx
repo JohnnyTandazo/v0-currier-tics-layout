@@ -38,12 +38,14 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import type { UserRole } from "@/app/page"
+import type { UserRole, ClientView } from "@/app/page"
 
 interface AppSidebarProps {
   user: any
   currentRole: UserRole
+  currentClientView: ClientView
   onRoleChange: (role: UserRole) => void
+  onClientViewChange: (view: ClientView) => void
   onLogout: () => void
 }
 
@@ -67,7 +69,7 @@ const trackingNavItems = [
   { title: "Todos los Envíos", icon: Package, badge: null },
 ]
 
-export function AppSidebar({ user, currentRole, onRoleChange, onLogout }: AppSidebarProps) {
+export function AppSidebar({ user, currentRole, currentClientView, onRoleChange, onClientViewChange, onLogout }: AppSidebarProps) {
   const getNavItems = () => {
     switch (currentRole) {
       case "client":
@@ -85,6 +87,40 @@ export function AppSidebar({ user, currentRole, onRoleChange, onLogout }: AppSid
     client: "Cliente",
     operator: "Operador",
     tracking: "Seguimiento",
+  }
+
+  const handleMenuClick = (itemTitle: string) => {
+    if (currentRole === "client") {
+      switch (itemTitle) {
+        case "Panel Principal":
+          onClientViewChange("dashboard")
+          break
+        case "Envíos":
+          onClientViewChange("envios")
+          break
+        case "Facturas":
+          onClientViewChange("facturas")
+          break
+        case "Pagos":
+          onClientViewChange("pagos")
+          break
+      }
+    }
+  }
+
+  const getClientView = (itemTitle: string): ClientView | null => {
+    switch (itemTitle) {
+      case "Panel Principal":
+        return "dashboard"
+      case "Envíos":
+        return "envios"
+      case "Facturas":
+        return "facturas"
+      case "Pagos":
+        return "pagos"
+      default:
+        return null
+    }
   }
 
   return (
@@ -145,7 +181,10 @@ export function AppSidebar({ user, currentRole, onRoleChange, onLogout }: AppSid
             <SidebarMenu>
               {getNavItems().map((item, index) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton isActive={index === 0}>
+                  <SidebarMenuButton 
+                    isActive={currentRole === "client" && currentClientView === getClientView(item.title)}
+                    onClick={() => handleMenuClick(item.title)}
+                  >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
                     {item.badge && (
