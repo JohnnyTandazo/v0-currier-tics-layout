@@ -9,11 +9,7 @@ export type ClientView = "dashboard" | "envios" | "facturas" | "pagos"
 
 // Dynamically import the entire DashboardLayout component
 // This ensures SidebarProvider and all sidebar hooks are only loaded when needed
-const DashboardLayout = lazy(() =>
-  import("@/components/ui/dashboard-layout").then((mod) => ({
-    default: mod.DashboardLayout,
-  }))
-)
+const DashboardLayout = lazy(() => import("@/components/ui/dashboard-layout"))
 
 function DashboardSkeleton() {
   return (
