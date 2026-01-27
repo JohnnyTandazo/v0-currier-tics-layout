@@ -1,31 +1,55 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, lazy, Suspense } from "react"
 import { LandingPage } from "@/components/landing-page"
-import { AppSidebar } from "@/components/app-sidebar"
-import { ClientDashboard } from "@/components/dashboards/client-dashboard"
-import { OperatorDashboard } from "@/components/dashboards/operator-dashboard"
-import { TrackingTimeline } from "@/components/dashboards/tracking-timeline"
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export type UserRole = "client" | "operator" | "tracking"
+export type ClientView = "dashboard" | "envios" | "facturas" | "pagos"
+
+// Dynamically import the entire DashboardLayout component
+// This ensures SidebarProvider and all sidebar hooks are only loaded when needed
+const DashboardLayout = lazy(() =>
+  import("@/components/dashboard-layout").then((mod) => ({
+    default: mod.DashboardLayout,
+  }))
+)
+
+function DashboardSkeleton() {
+  return (
+    <div className="flex h-screen w-full bg-background">
+      <div className="w-64 border-r border-border bg-card p-4">
+        <Skeleton className="h-10 w-full mb-6" />
+        <Skeleton className="h-8 w-full mb-2" />
+        <Skeleton className="h-8 w-full mb-2" />
+        <Skeleton className="h-8 w-full mb-2" />
+        <Skeleton className="h-8 w-full mb-2" />
+      </div>
+      <div className="flex-1 flex flex-col">
+        <div className="h-16 border-b border-border bg-card px-4 flex items-center">
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="flex-1 p-6">
+          <Skeleton className="h-8 w-48 mb-6" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [currentRole, setCurrentRole] = useState<UserRole>("client")
+  const [currentClientView, setCurrentClientView] = useState<ClientView>("dashboard")
   const [selectedTrackingId, setSelectedTrackingId] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Check localStorage on mount
   useEffect(() => {
@@ -47,6 +71,7 @@ export default function Home() {
           localStorage.removeItem("usuario")
         }
       }
+      setIsLoading(false)
     }
   }, [])
 
@@ -57,6 +82,7 @@ export default function Home() {
   const handleLogout = () => {
     setIsLoggedIn(false)
     setCurrentRole("client")
+    setCurrentClientView("dashboard")
     setUser(null)
     localStorage.removeItem("usuario")
   }
@@ -71,10 +97,16 @@ export default function Home() {
     setSelectedTrackingId(null)
   }
 
-  const roleLabels: Record<UserRole, string> = {
-    client: "Panel del Cliente",
-    operator: "Operador / Bodega",
-    tracking: "Seguimiento de Envío",
+  const handleClientViewChange = (view: ClientView) => {
+    setCurrentClientView(view)
+    if (currentRole !== "client") {
+      setCurrentRole("client")
+    }
+  }
+
+  // Show loading skeleton while checking auth state
+  if (isLoading) {
+    return <DashboardSkeleton />
   }
 
   // Show Landing Page if not logged in
@@ -82,42 +114,20 @@ export default function Home() {
     return <LandingPage onLogin={handleLogin} />
   }
 
-  // Show Dashboard if logged in
+  // Show Dashboard if logged in - wrapped in Suspense for lazy loading
   return (
-    <SidebarProvider>
-      <AppSidebar 
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardLayout
         user={user}
-        currentRole={currentRole} 
+        currentRole={currentRole}
+        currentClientView={currentClientView}
         onRoleChange={setCurrentRole}
+        onClientViewChange={handleClientViewChange}
         onLogout={handleLogout}
+        onViewTracking={handleViewTracking}
+        onBackFromTracking={handleBackFromTracking}
+        selectedTrackingId={selectedTrackingId}
       />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-card px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-medium">
-                  {roleLabels[currentRole]}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </header>
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          {currentRole === "client" && (
-            <ClientDashboard onViewTracking={handleViewTracking} />
-          )}
-          {currentRole === "operator" && <OperatorDashboard />}
-          {currentRole === "tracking" && (
-            <TrackingTimeline
-              trackingId={selectedTrackingId || "TRK-2024-001234"}
-              onBack={handleBackFromTracking}
-            />
-          )}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+    </Suspense>
   )
 }
