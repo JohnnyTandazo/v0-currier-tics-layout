@@ -28,6 +28,14 @@ interface ClientDashboardProps {
   onViewTracking: (trackingId: string) => void
 }
 
+interface Paquete {
+  id: number
+  trackingNumber: string
+  descripcion: string
+  pesoLibras: number
+  estado: string
+}
+
 const summaryCards = [
   {
     title: "Paquetes en Miami",
@@ -85,19 +93,35 @@ const nationalShipments = [
 
 export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
   const [isPreAlertOpen, setIsPreAlertOpen] = useState(false)
-  const [paquetes, setPaquetes] = useState([])
+  const [paquetes, setPaquetes] = useState<Paquete[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Esta función se ejecuta sola cuando entras a la página
   useEffect(() => {
     const fetchPaquetes = async () => {
+      setIsLoading(true)
+      setError(null)
       try {
-        const response = await fetch("http://localhost:8080/api/paquetes")
-        if (!response.ok) throw new Error("Error en la respuesta del servidor")
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL
+        if (!apiUrl) {
+          throw new Error("NEXT_PUBLIC_API_URL no está configurada")
+        }
+        
+        const url = `${apiUrl}/api/paquetes`
+        console.log("Conectando a:", url)
+        
+        const response = await fetch(url)
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`)
+        }
+        
         const data = await response.json()
-        console.log("Datos recibidos de Java:", data)
+        console.log("Datos recibidos del Backend:", data)
         setPaquetes(data)
-      } catch (error) {
-        console.error("Error conectando a Java:", error)
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Error desconocido"
+        console.error("Error conectando al Backend:", errorMessage)
+        setError(errorMessage)
         // Datos de respaldo para que no falle la UI
         setPaquetes([
           {
@@ -108,8 +132,11 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
             estado: "EN_MIAMI",
           },
         ])
+      } finally {
+        setIsLoading(false)
       }
     }
+
     fetchPaquetes()
   }, [])
 
@@ -120,6 +147,38 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
     if (estado === "ADUANA") return "bg-yellow-500"
     if (estado === "ENTREGADO") return "bg-green-500"
     return "bg-gray-500"
+  }
+
+  // Mostrar estado de carga
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-10">
+            <p className="text-muted-foreground">Cargando paquetes...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Mostrar error si existe
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex items-center justify-center py-10">
+            <div className="text-center">
+              <p className="font-medium text-red-800">Error al conectar</p>
+              <p className="text-sm text-red-600">{error}</p>
+              <p className="mt-2 text-xs text-red-500">
+                Verifica que NEXT_PUBLIC_API_URL esté configurada correctamente
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -178,52 +237,60 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paquetes.map((pkg: any) => (
-                    <TableRow key={pkg.id}>
-                      {/* Columna 1: Número de Guía (Tracking) */}
-                      <TableCell className="font-mono text-sm">
-                        {pkg.trackingNumber}
-                      </TableCell>
+                  {paquetes && paquetes.length > 0 ? (
+                    paquetes.map((pkg: Paquete) => (
+                      <TableRow key={pkg.id}>
+                        {/* Columna 1: Número de Guía (Tracking) */}
+                        <TableCell className="font-mono text-sm">
+                          {pkg.trackingNumber}
+                        </TableCell>
 
-                      {/* Columna 2: Descripción */}
-                      <TableCell>{pkg.descripcion}</TableCell>
+                        {/* Columna 2: Descripción */}
+                        <TableCell>{pkg.descripcion}</TableCell>
 
-                      {/* Columna 3: Peso (Le agregamos 'lb' para que se vea pro) */}
-                      <TableCell>{pkg.pesoLibras} lb</TableCell>
+                        {/* Columna 3: Peso (Le agregamos 'lb' para que se vea pro) */}
+                        <TableCell>{pkg.pesoLibras} lb</TableCell>
 
-                      {/* Columna 4: Estado con color dinámico */}
-                      <TableCell>
-                        <Badge
-                          variant="secondary"
-                          className={`${getStatusColor(pkg.estado)} text-white`}
-                        >
-                          {pkg.estado}
-                        </Badge>
-                      </TableCell>
-
-                      {/* Columna 5: Botones */}
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onViewTracking(pkg.trackingNumber)}
+                        {/* Columna 4: Estado con color dinámico */}
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={`${getStatusColor(pkg.estado)} text-white`}
                           >
-                            <Eye className="mr-1 h-3 w-3" />
-                            Rastrear
-                          </Button>
-                          
-                          {/* Solo mostramos botón Pagar si ya pasó aduana */}
-                          {pkg.estado === "ADUANA" && (
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
-                              <CreditCard className="mr-1 h-3 w-3" />
-                              Pagar
+                            {pkg.estado}
+                          </Badge>
+                        </TableCell>
+
+                        {/* Columna 5: Botones */}
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onViewTracking(pkg.trackingNumber)}
+                            >
+                              <Eye className="mr-1 h-3 w-3" />
+                              Rastrear
                             </Button>
-                          )}
-                        </div>
+                            
+                            {/* Solo mostramos botón Pagar si ya pasó aduana */}
+                            {pkg.estado === "ADUANA" && (
+                              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                                <CreditCard className="mr-1 h-3 w-3" />
+                                Pagar
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                        No hay paquetes disponibles
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
