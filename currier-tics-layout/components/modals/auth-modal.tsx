@@ -42,9 +42,14 @@ export function AuthModal({
     setIsLoading(true)
 
     try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl) {
+        throw new Error("NEXT_PUBLIC_API_URL no está configurada")
+      }
+
       if (mode === "login") {
         // LOGIN: POST to /api/usuarios/login
-        const response = await fetch("http://localhost:8080/api/usuarios/login", {
+        const response = await fetch(`${apiUrl}/api/usuarios/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),

@@ -37,49 +37,41 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Datos simulados para prueba
-  const MOCK_PACKAGE = {
-    id: 1,
-    trackingNumber: trackingId,
-    descripcion: "Laptop Gamer - Dell XPS 15 (Simulado)",
-    pesoLibras: 8.5,
-    precio: 1299.99,
-    estado: "ADUANA",
-    usuario: {
-      nombre: "Juan Pérez",
-    },
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  }
-
-  // Simulación de historial de seguimiento
-  const MOCK_EVENTS = [
-    { fecha: "25 de Oct 2024", hora: "09:30 AM", evento: "Paquete Pre-alertado", ubicacion: "Miami, FL" },
-    { fecha: "25 de Oct 2024", hora: "02:15 PM", evento: "Recibido en Miami", ubicacion: "Miami, FL" },
-    { fecha: "26 de Oct 2024", hora: "10:45 AM", evento: "Despachado a Ecuador", ubicacion: "Miami, FL" },
-    { fecha: "27 de Oct 2024", hora: "04:30 PM", evento: "Llegada a Guayaquil", ubicacion: "Guayaquil, EC" },
-  ]
-
   useEffect(() => {
     const fetchPackage = async () => {
+      setIsLoading(true)
+      setError(null)
       try {
-        // Comentado: Conectar al backend cuando esté disponible
-        // const response = await fetch("http://localhost:8080/api/paquetes")
-        // if (!response.ok) throw new Error("Error al obtener paquetes")
-        // const paquetes = await response.json()
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL
+        if (!apiUrl) {
+          throw new Error("NEXT_PUBLIC_API_URL no está configurada")
+        }
 
-        // Simulación: delay de 1 segundo para parecer que procesa
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        const url = `${apiUrl}/api/paquetes/track/${encodeURIComponent(trackingId)}`
+        console.log("Buscando paquete en:", url)
 
-        // Simular éxito: Usar datos mock
-        console.log("✅ Usando datos simulados de seguimiento para:", trackingId)
-        setPackageData(MOCK_PACKAGE)
-        setError(null)
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(
+            errorData.message || `Error ${response.status}: ${response.statusText}`
+          )
+        }
+
+        const data = await response.json()
+        console.log("Paquete encontrado:", data)
+        setPackageData(data)
       } catch (err) {
-        console.error("Error fetching package:", err)
-        // Si falla el fetch real, también usar mock data
-        console.log("⚠️ Backend no disponible, usando datos simulados")
-        setPackageData(MOCK_PACKAGE)
-        setError(null)
+        const errorMessage = err instanceof Error ? err.message : "Error desconocido"
+        console.error("Error al buscar paquete:", errorMessage)
+        setError(errorMessage)
+        setPackageData(null)
       } finally {
         setIsLoading(false)
       }

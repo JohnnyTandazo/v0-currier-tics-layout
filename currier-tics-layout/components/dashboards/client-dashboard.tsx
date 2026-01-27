@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Package,
   Plane,
@@ -91,48 +91,51 @@ const nationalShipments = [
   },
 ]
 
-// Mock data para paquetes internacionales
-const MOCK_PAQUETES: Paquete[] = [
-  {
-    id: 1,
-    trackingNumber: "TRK-2024-001234",
-    descripcion: "Laptop Gamer - Dell XPS 15",
-    pesoLibras: 8.5,
-    estado: "EN_MIAMI",
-  },
-  {
-    id: 2,
-    trackingNumber: "TRK-2024-001235",
-    descripcion: "Zapatos Nike Air Max - Talla 10",
-    pesoLibras: 2.1,
-    estado: "ADUANA",
-  },
-  {
-    id: 3,
-    trackingNumber: "TRK-2024-001236",
-    descripcion: "Monitor 4K LG 27 pulgadas",
-    pesoLibras: 15.3,
-    estado: "EN_MIAMI",
-  },
-  {
-    id: 4,
-    trackingNumber: "TRK-2024-001237",
-    descripcion: "Auriculares Bluetooth Sony",
-    pesoLibras: 0.8,
-    estado: "PRE_ALERTADO",
-  },
-  {
-    id: 5,
-    trackingNumber: "TRK-2024-001238",
-    descripcion: "Ropa deportiva - Pack de 3 prendas",
-    pesoLibras: 3.2,
-    estado: "ENTREGADO",
-  },
-]
-
 export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
   const [isPreAlertOpen, setIsPreAlertOpen] = useState(false)
-  const [paquetes] = useState<Paquete[]>(MOCK_PAQUETES)
+  const [paquetes, setPaquetes] = useState<Paquete[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchPaquetes = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL
+        if (!apiUrl) {
+          throw new Error("NEXT_PUBLIC_API_URL no está configurada")
+        }
+
+        const url = `${apiUrl}/api/paquetes`
+        console.log("Conectando a:", url)
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        console.log("Datos recibidos del Backend:", data)
+        setPaquetes(Array.isArray(data) ? data : [])
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Error desconocido"
+        console.error("Error conectando al Backend:", errorMessage)
+        setError(errorMessage)
+        setPaquetes([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchPaquetes()
+  }, [])
 
   // Función auxiliar para darle color según el estado
   const getStatusColor = (estado: string) => {
@@ -141,6 +144,38 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
     if (estado === "ADUANA") return "bg-yellow-500"
     if (estado === "ENTREGADO") return "bg-green-500"
     return "bg-gray-500"
+  }
+
+  // Mostrar estado de carga
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-10">
+            <p className="text-muted-foreground">Cargando paquetes...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Mostrar error si existe
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex items-center justify-center py-10">
+            <div className="text-center">
+              <p className="font-medium text-red-800">Error al conectar</p>
+              <p className="text-sm text-red-600">{error}</p>
+              <p className="mt-2 text-xs text-red-500">
+                Verifica que NEXT_PUBLIC_API_URL esté configurada correctamente
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (

@@ -67,12 +67,17 @@ export function PreAlertModal({ open, onOpenChange }: PreAlertModalProps) {
     setIsSubmitting(true)
 
     try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl) {
+        throw new Error("NEXT_PUBLIC_API_URL no está configurada")
+      }
+
       // Get user from localStorage
       const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
       const usuarioId = usuario.id || 1
 
       // POST to backend
-      const response = await fetch("http://localhost:8080/api/paquetes", {
+      const response = await fetch(`${apiUrl}/api/paquetes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

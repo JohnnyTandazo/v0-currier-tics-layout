@@ -63,7 +63,10 @@ export function OperatorDashboard() {
     if (!trackingNumber) return
 
     try {
-      const res = await fetch("http://localhost:8080/api/paquetes")
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL no configurada")
+
+      const res = await fetch(`${apiUrl}/api/paquetes`)
       if (!res.ok) throw new Error("Error en la respuesta del servidor")
       const paquetes = await res.json()
 
@@ -161,12 +164,15 @@ export function OperatorDashboard() {
     if (!statusTrackingNumber || !selectedStatus) return
 
     try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL no configurada")
+
       // Ensure we have the package id
       let idToUpdate: any = packageFound?.id
 
       if (!idToUpdate) {
         // Fetch paquetes and find by tracking number
-        const res = await fetch("http://localhost:8080/api/paquetes")
+        const res = await fetch(`${apiUrl}/api/paquetes`)
         if (!res.ok) throw new Error("Error al obtener paquetes")
         const paquetes = await res.json()
         const found = paquetes.find((p: any) => {
@@ -188,7 +194,7 @@ export function OperatorDashboard() {
         categoria: category || null,
       }
 
-      const putRes = await fetch(`http://localhost:8080/api/paquetes/${idToUpdate}/detalles`, {
+      const putRes = await fetch(`${apiUrl}/api/paquetes/${idToUpdate}/detalles`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
