@@ -72,33 +72,35 @@ export function AuthModal({
           window.location.reload()
         }, 500)
       } else {
-        // REGISTER: Simulación de registro exitoso (Backend no disponible)
-        // TODO: Reemplazar con fetch real cuando el backend esté disponible
-        
-        // Simulamos un delay de 1500ms para parecer que procesa
-        await new Promise((resolve) => setTimeout(resolve, 1500))
+        // REGISTER: POST to /api/usuarios/registro
+        const response = await fetch(`${apiUrl}/api/usuarios/registro`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: fullName,
+            email: email,
+            password: password,
+            telefono: phone,
+            rol: "CLIENTE",
+          }),
+        })
 
-        // Datos simulados del usuario registrado
-        const mockUser = {
-          id: Math.random(),
-          nombre: fullName,
-          email: email,
-          telefono: phone,
-          rol: "CLIENTE",
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}))
+          throw new Error(error.message || "No se pudo crear la cuenta")
         }
 
-        // Guardar en localStorage (simulación de token y usuario)
-        localStorage.setItem("currier_token", "token-demo-registro")
-        localStorage.setItem("usuario", JSON.stringify(mockUser))
+        const data = await response.json()
+        console.log("✅ Cuenta creada:", data)
 
-        console.log("✅ Cuenta creada (simulada):", mockUser)
+        // Save to localStorage
+        localStorage.setItem("usuario", JSON.stringify(data))
 
-        // Mostrar mensaje de éxito
-        alert("¡Cuenta creada con éxito! Bienvenido al sistema.")
+        // Show success message
+        alert("¡Cuenta creada con éxito! Iniciando sesión...")
 
-        // Cerrar modal y redirigir al dashboard
+        // Close modal and reload page
         onSuccess()
-        resetForm()
         setTimeout(() => {
           window.location.reload()
         }, 500)

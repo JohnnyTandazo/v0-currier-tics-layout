@@ -47,6 +47,16 @@ export default function Home() {
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Validar y loguear la URL del backend
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL
+    if (apiUrl) {
+      console.log("✅ Conectando a Backend:", apiUrl)
+    } else {
+      console.warn("⚠️ NEXT_PUBLIC_API_URL no está configurada")
+    }
+  }, [])
+
   // Check localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
