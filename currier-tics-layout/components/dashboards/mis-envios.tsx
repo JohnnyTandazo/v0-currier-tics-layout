@@ -53,27 +53,33 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [usuario, setUsuario] = useState<any>(null)
 
   useEffect(() => {
     const fetchEnvios = async () => {
       setIsLoading(true)
       setError(null)
+      
       try {
+        // Primero verificamos el usuario
+        const usuarioStored = JSON.parse(localStorage.getItem("usuario") || "null")
+        
+        if (!usuarioStored || !usuarioStored.id) {
+          console.log("Usuario no autenticado")
+          setUsuario(null)
+          setEnvios([])
+          setIsLoading(false)
+          return
+        }
+        
+        setUsuario(usuarioStored)
+        
         const apiUrl = process.env.NEXT_PUBLIC_API_URL
         if (!apiUrl) {
           throw new Error("NEXT_PUBLIC_API_URL is not configured")
         }
 
-        const usuario = JSON.parse(localStorage.getItem("usuario") || "null")
-        if (!usuario || !usuario.id) {
-          console.error("Usuario no autenticado o inválido")
-          setEnvios([])
-          return
-        }
-
-        const usuarioId = usuario.id
-
-        const url = `${apiUrl}/api/paquetes?usuarioId=${usuarioId}`
+        const url = `${apiUrl}/api/paquetes`
         const response = await fetch(url, {
           method: "GET",
           headers: {
@@ -86,18 +92,24 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         }
 
         const data = await response.json()
-        console.log("USUARIO LOGUEADO:", usuario)
-        console.log("PRIMER ENVÍO RAW:", data[0])
+        
+        // Verificar que data sea un array antes de filtrar
+        if (!Array.isArray(data)) {
+          setEnvios([])
+          return
+        }
+        
+        console.log("USUARIO LOGUEADO:", usuarioStored)
+        console.log("DATOS RAW:", data.length, "registros")
 
+        // FILTRADO ESTRICTO por usuario
         const misEnvios = data.filter((p: any) => {
-          // Intentamos obtener el ID del paquete de varias formas posibles
           const packUserId = p.usuarioId || p.usuario?.id || p.id_usuario
-          const myUserId = usuario.id || usuario.usuarioId
-          // Comparamos como Strings para evitar errores de tipo (3 vs "3")
+          const myUserId = usuarioStored.id
           return String(packUserId) === String(myUserId)
         })
 
-        console.log("ENVÍOS FILTRADOS:", misEnvios)
+        console.log("ENVÍOS FILTRADOS:", misEnvios.length, "registros")
         setEnvios(misEnvios)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error")
@@ -125,10 +137,33 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="flex items-center justify-center py-10">
-            <p className="text-muted-foreground">Loading your shipments...</p>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Cargando envíos...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!usuario) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardContent className="flex flex-col items-center justify-center py-10">
+            <AlertCircle className="h-16 w-16 text-yellow-500 mb-4" />
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">
+              Sesión requerida
+            </h2>
+            <p className="text-gray-600 mb-6 text-center">
+              Debes iniciar sesión para ver tus envíos.
+            </p>
+            <a
+              href="/login"
+              className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Iniciar Sesión
+            </a>
           </CardContent>
         </Card>
       </div>

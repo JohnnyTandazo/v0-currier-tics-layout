@@ -1,6 +1,7 @@
 "use client"
 
-import { Bell, Package, Truck, Check, AlertCircle, DollarSign, Clock } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Bell, Package, Truck, Check, AlertCircle, DollarSign, Clock, Eye, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,68 +11,17 @@ interface Notificacion {
   id: number
   title: string
   message: string
-  icon: React.ReactNode
   type: "success" | "warning" | "info" | "error"
   timestamp: string
   read: boolean
+  usuarioId?: number
+  usuario?: { id: number }
 }
 
-const MOCK_NOTIFICACIONES: Notificacion[] = [
-  {
-    id: 1,
-    title: "Paquete Entregado",
-    message: "Tu paquete TRK-2024-001234 (Laptop Gamer) ha sido entregado exitosamente.",
-    icon: <Check className="h-5 w-5 text-green-500" />,
-    type: "success",
-    timestamp: "Hace 2 horas",
-    read: true,
-  },
-  {
-    id: 2,
-    title: "En Aduana",
-    message: "Tu paquete TRK-2024-001235 (Zapatos Nike) está en aduana y requiere pago de aranceles.",
-    icon: <AlertCircle className="h-5 w-5 text-yellow-500" />,
-    type: "warning",
-    timestamp: "Hace 4 horas",
-    read: false,
-  },
-  {
-    id: 3,
-    title: "En Tránsito",
-    message: "Tu paquete TRK-2024-001236 (Monitor 4K) está en tránsito desde Miami.",
-    icon: <Truck className="h-5 w-5 text-blue-500" />,
-    type: "info",
-    timestamp: "Hace 1 día",
-    read: false,
-  },
-  {
-    id: 4,
-    title: "Pago Procesado",
-    message: "Tu pago de $127.50 ha sido procesado correctamente. Referencia: PAG-2024-009876.",
-    icon: <DollarSign className="h-5 w-5 text-green-500" />,
-    type: "success",
-    timestamp: "Hace 2 días",
-    read: true,
-  },
-  {
-    id: 5,
-    title: "Listo para Retiro",
-    message: "Tu paquete TRK-2024-001237 (Auriculares Sony) está listo para retiro en nuestro centro de distribución.",
-    icon: <Package className="h-5 w-5 text-purple-500" />,
-    type: "info",
-    timestamp: "Hace 3 días",
-    read: true,
-  },
-  {
-    id: 6,
-    title: "Recordatorio de Pago",
-    message: "Tienes una factura pendiente de pago. Monto: $85.00. Vencimiento: 5 de febrero.",
-    icon: <Clock className="h-5 w-5 text-orange-500" />,
-    type: "warning",
-    timestamp: "Hace 5 días",
-    read: true,
-  },
-]
+interface Usuario {
+  id: number
+  nombre: string
+}
 
 const getTypeColor = (type: string) => {
   switch (type) {
@@ -103,8 +53,147 @@ const getTypeBadgeColor = (type: string) => {
   }
 }
 
+const getIcon = (type: string) => {
+  switch (type) {
+    case "success":
+      return <Check className="h-5 w-5 text-green-500" />
+    case "warning":
+      return <AlertCircle className="h-5 w-5 text-yellow-500" />
+    case "error":
+      return <AlertCircle className="h-5 w-5 text-red-500" />
+    case "info":
+      return <Truck className="h-5 w-5 text-blue-500" />
+    default:
+      return <Bell className="h-5 w-5 text-gray-500" />
+  }
+}
+
 export function Notificaciones() {
-  const unreadCount = MOCK_NOTIFICACIONES.filter((n) => !n.read).length
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
+  const [loading, setLoading] = useState(true)
+  const [usuario, setUsuario] = useState<Usuario | null>(null)
+
+  // Obtener usuario del localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("usuario")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (parsed && parsed.id) {
+          setUsuario(parsed)
+        } else {
+          setLoading(false)
+        }
+      } else {
+        setLoading(false)
+      }
+    } catch {
+      setLoading(false)
+    }
+  }, [])
+
+  // Fetch notificaciones SOLO si hay usuario
+  useEffect(() => {
+    if (!usuario || !usuario.id) return
+
+    const fetchNotificaciones = async () => {
+      try {
+        setLoading(true)
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL
+        if (!apiUrl) {
+          setNotificaciones([])
+          setLoading(false)
+          return
+        }
+
+        const response = await fetch(`${apiUrl}/api/notificaciones`)
+        
+        if (response.ok) {
+          const data = await response.json()
+          
+          if (Array.isArray(data)) {
+            // FILTRADO ESTRICTO por usuario
+            const misNotificaciones = data.filter(
+              (n: any) => String(n.usuarioId || n.usuario?.id) === String(usuario.id)
+            )
+            setNotificaciones(misNotificaciones)
+          } else {
+            setNotificaciones([])
+          }
+        } else {
+          setNotificaciones([])
+        }
+      } catch (err) {
+        console.error("Error fetching notificaciones:", err)
+        setNotificaciones([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchNotificaciones()
+  }, [usuario])
+
+  // Marcar como leída
+  const handleMarcarLeida = (id: number) => {
+    console.log("Marcando como leída:", id)
+    setNotificaciones((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    )
+  }
+
+  // Marcar todas como leídas
+  const handleMarcarTodasLeidas = () => {
+    console.log("Marcando todas como leídas")
+    setNotificaciones((prev) => prev.map((n) => ({ ...n, read: true })))
+  }
+
+  // Eliminar notificación
+  const handleEliminar = (id: number) => {
+    console.log("Eliminando notificación:", id)
+    setNotificaciones((prev) => prev.filter((n) => n.id !== id))
+  }
+
+  const unreadCount = notificaciones.filter((n) => !n.read).length
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando notificaciones...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Sin sesión
+  if (!usuario) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                Sesión requerida
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Inicia sesión para ver tus notificaciones.
+              </p>
+              <a
+                href="/login"
+                className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Iniciar Sesión
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -119,87 +208,15 @@ export function Notificaciones() {
             </Badge>
           )}
         </div>
-        <Button variant="outline" size="sm">
-          Marcar todas como leídas
-        </Button>
+        {unreadCount > 0 && (
+          <Button variant="outline" size="sm" onClick={handleMarcarTodasLeidas}>
+            Marcar todas como leídas
+          </Button>
+        )}
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2">
-        <Button variant="default" size="sm">
-          Todas
-        </Button>
-        <Button variant="outline" size="sm">
-          No leídas
-        </Button>
-        <Button variant="outline" size="sm">
-          Paquetes
-        </Button>
-        <Button variant="outline" size="sm">
-          Pagos
-        </Button>
-      </div>
-
-      {/* Notificaciones List */}
-      <div className="space-y-3">
-        {MOCK_NOTIFICACIONES.map((notif) => (
-          <Card
-            key={notif.id}
-            className={`border-l-4 transition-all ${getTypeColor(notif.type)} ${
-              !notif.read ? "bg-card/50" : "bg-card"
-            }`}
-          >
-            <CardContent className="pt-6">
-              <div className="flex gap-4">
-                {/* Icon */}
-                <div className="flex-shrink-0 mt-1">{notif.icon}</div>
-
-                {/* Content */}
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-sm md:text-base">
-                          {notif.title}
-                        </h3>
-                        {!notif.read && (
-                          <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {notif.message}
-                      </p>
-                    </div>
-                    <Badge variant="secondary" className={getTypeBadgeColor(notif.type)}>
-                      {notif.type}
-                    </Badge>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
-                    <span className="text-xs text-muted-foreground">
-                      {notif.timestamp}
-                    </span>
-                    <div className="flex gap-2">
-                      {!notif.read && (
-                        <Button variant="ghost" size="sm" className="h-8 text-xs">
-                          Marcar como leída
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="sm" className="h-8 text-xs">
-                        Descartar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Empty State (comentado para que siempre muestre notificaciones) */}
-      {/* {MOCK_NOTIFICACIONES.length === 0 && (
+      {/* Lista de notificaciones */}
+      {notificaciones.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Bell className="h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -211,7 +228,76 @@ export function Notificaciones() {
             </p>
           </CardContent>
         </Card>
-      )} */}
+      ) : (
+        <div className="space-y-3">
+          {notificaciones.map((notif) => (
+            <Card
+              key={notif.id}
+              className={`border-l-4 transition-all ${getTypeColor(notif.type)} ${
+                !notif.read ? "bg-card/50" : "bg-card"
+              }`}
+            >
+              <CardContent className="pt-6">
+                <div className="flex gap-4">
+                  {/* Icon */}
+                  <div className="flex-shrink-0 mt-1">{getIcon(notif.type)}</div>
+
+                  {/* Content */}
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-sm md:text-base">
+                            {notif.title}
+                          </h3>
+                          {!notif.read && (
+                            <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {notif.message}
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className={getTypeBadgeColor(notif.type)}>
+                        {notif.type}
+                      </Badge>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
+                      <span className="text-xs text-muted-foreground">
+                        {notif.timestamp}
+                      </span>
+                      <div className="flex gap-2">
+                        {!notif.read && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 text-xs"
+                            onClick={() => handleMarcarLeida(notif.id)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            Marcar como leída
+                          </Button>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-xs text-red-500 hover:text-red-600"
+                          onClick={() => handleEliminar(notif.id)}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Descartar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
