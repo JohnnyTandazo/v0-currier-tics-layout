@@ -147,6 +147,43 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
     return <Badge variant={variant}>{label}</Badge>
   }
 
+  // Función para manejar pago real
+  const handlePagar = async (paqueteId: number) => {
+    const confirmar = confirm(
+      "¿Estás seguro de que deseas marcar este paquete como pagado?"
+    )
+    if (!confirmar) return
+
+    try {
+      setLoading(true)
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl) throw new Error("API URL no configurada")
+
+      const response = await fetch(`${apiUrl}/api/paquetes/${paqueteId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estado: "PAGADO", pagado: true }),
+      })
+
+      if (!response.ok) throw new Error("Error al procesar el pago")
+
+      const res = await fetch(`${apiUrl}/api/paquetes`)
+      const data = await res.json()
+      if (Array.isArray(data) && usuario) {
+        const misDatos = data.filter(
+          (p: any) => String(p.usuarioId || p.usuario?.id) === String(usuario.id)
+        )
+        setPaquetes(misDatos)
+      }
+      alert("Pago registrado exitosamente")
+    } catch (error) {
+      console.error("Error al procesar pago:", error)
+      alert("Error al procesar el pago. Intenta nuevamente.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Función para formatear fecha
   const formatearFecha = (fecha?: string) => {
     if (!fecha) return "-"
@@ -376,8 +413,9 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
                             <Button
                               variant="default"
                               size="sm"
-                              onClick={() => alert(`Redirigiendo a pagos para paquete ${paquete.id}`)}
+                              onClick={() => handlePagar(paquete.id)}
                               className="bg-green-600 hover:bg-green-700"
+                              disabled={loading}
                             >
                               <DollarSign className="h-4 w-4 mr-1" />
                               Pagar

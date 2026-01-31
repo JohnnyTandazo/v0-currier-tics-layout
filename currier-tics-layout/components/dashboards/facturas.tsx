@@ -10,7 +10,17 @@ interface Paquete {
   descripcion: string;
   precio: number;
   usuarioId: number;
+  estado?: string;
 }
+
+const printStyles = `
+  @media print {
+    body * { visibility: hidden; }
+    #factura-content, #factura-content * { visibility: visible; }
+    #factura-content { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 20px; }
+    .no-print { display: none !important; }
+  }
+`;
 
 export function Facturas() {
   const [paquetes, setPaquetes] = useState<Paquete[]>([]);
@@ -42,10 +52,16 @@ export function Facturas() {
           return;
         }
 
-        const misPaquetes = data.filter((p: any) => p.usuarioId == usuario.id);
-        console.log("Facturas filtradas:", misPaquetes);
+        const misFacturas = Array.isArray(data)
+          ? data.filter(
+              (p: any) =>
+                (p.estado === "PAGADO" || p.estado === "LIBERADO") &&
+                String(p.usuarioId || p.usuario?.id) === String(usuario.id)
+            )
+          : [];
+        console.log("Facturas filtradas:", misFacturas);
 
-        setPaquetes(misPaquetes);
+        setPaquetes(misFacturas);
       } catch (error) {
         console.error("Error al obtener paquetes:", error);
       } finally {
@@ -62,11 +78,13 @@ export function Facturas() {
 
   return (
     <div className="space-y-4">
+      <style>{printStyles}</style>
       <h1 className="text-2xl font-bold">Facturas</h1>
       {isLoading ? (
         <p>Cargando paquetes...</p>
       ) : (
-        <Table>
+        <div id="factura-content">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Número de Guía</TableHead>
@@ -83,9 +101,10 @@ export function Facturas() {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       )}
-      <Button onClick={imprimirFactura} className="mt-4">
+      <Button onClick={imprimirFactura} className="mt-4 no-print">
         Imprimir Factura
       </Button>
     </div>

@@ -123,13 +123,20 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
   }, [])
 
   const filteredEnvios = useMemo(() => {
+    if (!Array.isArray(envios)) return []
+    
     return envios.filter((envio) => {
+      const trackingId = envio?.trackingId || ""
+      const destinatario = envio?.destinatario || ""
+      const descripcion = envio?.descripcion || ""
+      const estado = envio?.estado || ""
+      
       const matchesSearch =
-        envio.trackingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        envio.destinatario.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        envio.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
+        trackingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        destinatario.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        descripcion.toLowerCase().includes(searchTerm.toLowerCase())
 
-      const matchesStatus = statusFilter === "all" || envio.estado === statusFilter
+      const matchesStatus = statusFilter === "all" || estado === statusFilter
 
       return matchesSearch && matchesStatus
     })

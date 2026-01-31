@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "deploy": "git add . && git commit -m \"Auto-fix: Correccion de logica pagos, impresion y crash\" && git push origin main"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
