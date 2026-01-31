@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"
+import { Package, Plane, MapPin, DollarSign } from "lucide-react"
 
 interface Stats {
   miami: number
@@ -9,7 +10,11 @@ interface Stats {
   deuda: number
 }
 
-export function ClientDashboard() {
+interface ClientDashboardProps {
+  onViewTracking: (trackingId: string) => void
+}
+
+export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
   const [usuario, setUsuario] = useState<any>(null)
   const [stats, setStats] = useState<Stats>({ miami: 0, enCamino: 0, porPagar: 0, deuda: 0 })
   const [loading, setLoading] = useState(true)
