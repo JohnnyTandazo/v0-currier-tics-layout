@@ -14,6 +14,7 @@ import {
 } from "../ui/table"
 import { Package, Plane, MapPin, DollarSign, Bell, CreditCard, AlertCircle, Eye, Plus } from "lucide-react"
 import { PreAlertModal } from "../modals/pre-alert-modal"
+import { PaymentModal } from "./payment-modal"
 
 interface Paquete {
   id: number
@@ -50,6 +51,8 @@ interface ClientDashboardProps {
 
 export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
   const [isPreAlertOpen, setIsPreAlertOpen] = useState(false)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [paqueteAPagar, setPaqueteAPagar] = useState<Paquete | null>(null)
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [paquetes, setPaquetes] = useState<Paquete[]>([])
   const [stats, setStats] = useState<Stats>({ 
@@ -62,70 +65,71 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
   })
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const userStored = JSON.parse(localStorage.getItem("usuario") || "null")
-        if (!userStored || !userStored.id) {
-          setLoading(false)
-          return
-        }
-        setUsuario(userStored)
-
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL
-        if (!apiUrl) {
-          throw new Error("NEXT_PUBLIC_API_URL no está configurada")
-        }
-
-        const res = await fetch(`${apiUrl}/api/paquetes`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (!res.ok) {
-          throw new Error("Error al obtener paquetes")
-        }
-
-        const data = await res.json()
-
-        // Verificar que data sea un array
-        if (!Array.isArray(data)) {
-          setStats({ miami: 0, enCamino: 0, porPagar: 0, deuda: 0, totalPaquetes: 0, notificaciones: 0 })
-          return
-        }
-
-        // FILTRO DE PRIVACIDAD OBLIGATORIO
-        const misDatos = data.filter(
-          (p: any) => String(p.usuarioId || p.usuario?.id) === String(userStored.id)
-        )
-
-        // Guardar los paquetes filtrados para la tabla
-        setPaquetes(misDatos)
-
-        // CALCULAR ESTADÍSTICAS SOLO CON MIS DATOS
-        setStats({
-          totalPaquetes: misDatos.length,
-          miami: misDatos.filter(
-            (p: any) => p.estado === "EN_MIAMI" || p.estado === "PRE_ALERTA" || p.estado === "PRE_ALERTADO"
-          ).length,
-          enCamino: misDatos.filter((p: any) => p.estado === "EN_TRANSITO").length,
-          porPagar: misDatos.filter(
-            (p: any) => p.estado === "ENTREGADO" || p.estado === "POR_PAGAR" || p.estado === "ADUANA"
-          ).length,
-          deuda: misDatos
-            .filter((p: any) => !p.pagado)
-            .reduce((acc: number, p: any) => acc + (p.precio || 0), 0),
-          notificaciones: 0,
-        })
-      } catch (e) {
-        console.error("Error cargando datos:", e)
-      } finally {
+  // Función para cargar datos
+  const cargarDatos = async () => {
+    try {
+      const userStored = JSON.parse(localStorage.getItem("usuario") || "null")
+      if (!userStored || !userStored.id) {
         setLoading(false)
+        return
       }
-    }
+      setUsuario(userStored)
 
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl) {
+        throw new Error("NEXT_PUBLIC_API_URL no está configurada")
+      }
+
+      const res = await fetch(`${apiUrl}/api/paquetes`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!res.ok) {
+        throw new Error("Error al obtener paquetes")
+      }
+
+      const data = await res.json()
+
+      // Verificar que data sea un array
+      if (!Array.isArray(data)) {
+        setStats({ miami: 0, enCamino: 0, porPagar: 0, deuda: 0, totalPaquetes: 0, notificaciones: 0 })
+        return
+      }
+
+      // FILTRO DE PRIVACIDAD OBLIGATORIO
+      const misDatos = data.filter(
+        (p: any) => String(p.usuarioId || p.usuario?.id) === String(userStored.id)
+      )
+
+      // Guardar los paquetes filtrados para la tabla
+      setPaquetes(misDatos)
+
+      // CALCULAR ESTADÍSTICAS SOLO CON MIS DATOS
+      setStats({
+        totalPaquetes: misDatos.length,
+        miami: misDatos.filter(
+          (p: any) => p.estado === "EN_MIAMI" || p.estado === "PRE_ALERTA" || p.estado === "PRE_ALERTADO"
+        ).length,
+        enCamino: misDatos.filter((p: any) => p.estado === "EN_TRANSITO").length,
+        porPagar: misDatos.filter(
+          (p: any) => p.estado === "ENTREGADO" || p.estado === "POR_PAGAR" || p.estado === "ADUANA"
+        ).length,
+        deuda: misDatos
+          .filter((p: any) => !p.pagado)
+          .reduce((acc: number, p: any) => acc + (p.precio || 0), 0),
+        notificaciones: 0,
+      })
+    } catch (e) {
+      console.error("Error cargando datos:", e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     cargarDatos()
   }, [])
 
@@ -147,40 +151,54 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
     return <Badge variant={variant}>{label}</Badge>
   }
 
-  // Función para manejar pago real
-  const handlePagar = async (paqueteId: number) => {
-    const confirmar = confirm(
-      "¿Estás seguro de que deseas marcar este paquete como pagado?"
-    )
-    if (!confirmar) return
+  // Abrir modal de pago
+  const handleAbrirModalPago = (paquete: Paquete) => {
+    setPaqueteAPagar(paquete)
+    setIsPaymentModalOpen(true)
+  }
+
+  // Confirmar pago
+  const handleConfirmarPago = async () => {
+    if (!paqueteAPagar) return
 
     try {
       setLoading(true)
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       if (!apiUrl) throw new Error("API URL no configurada")
 
-      const response = await fetch(`${apiUrl}/api/paquetes/${paqueteId}`, {
+      const response = await fetch(`${apiUrl}/api/paquetes/${paqueteAPagar.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estado: "PAGADO", pagado: true }),
+        body: JSON.stringify({ 
+          estado: "PAGADO", 
+          pagado: true,
+          fechaPago: new Date().toISOString()
+        }),
       })
 
-      if (!response.ok) throw new Error("Error al procesar el pago")
-
-      const res = await fetch(`${apiUrl}/api/paquetes`)
-      const data = await res.json()
-      if (Array.isArray(data) && usuario) {
-        const misDatos = data.filter(
-          (p: any) => String(p.usuarioId || p.usuario?.id) === String(usuario.id)
-        )
-        setPaquetes(misDatos)
+      if (!response.ok) {
+        const errorData = await response.json()
+        const errorMessage = errorData.message || errorData.error || "Error desconocido"
+        throw new Error(errorMessage)
       }
-      alert("Pago registrado exitosamente")
-    } catch (error) {
+
+      setIsPaymentModalOpen(false)
+      setPaqueteAPagar(null)
+      alert("✅ Pago procesado correctamente")
+      await cargarDatos()
+    } catch (error: any) {
       console.error("Error al procesar pago:", error)
-      alert("Error al procesar el pago. Intenta nuevamente.")
+      alert(`❌ Error al procesar el pago: ${error.message || "Error de conexión"}`)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Función para manejar pago real
+  const handlePagar = async (paqueteId: number) => {
+    const paquete = paquetes.find(p => p.id === paqueteId)
+    if (paquete) {
+      handleAbrirModalPago(paquete)
     }
   }
 
@@ -434,6 +452,18 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
 
       {/* Modal de Pre-Alertar */}
       <PreAlertModal open={isPreAlertOpen} onOpenChange={setIsPreAlertOpen} />
+
+      {/* Modal de Pago */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => {
+          setIsPaymentModalOpen(false)
+          setPaqueteAPagar(null)
+        }}
+        onConfirm={handleConfirmarPago}
+        monto={paqueteAPagar?.precio || 0}
+        descripcion={`Pago de paquete ${paqueteAPagar?.trackingNumber || paqueteAPagar?.tracking || ""}`}
+      />
     </div>
   )
 }
