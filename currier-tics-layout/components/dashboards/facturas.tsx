@@ -579,7 +579,7 @@ export function Facturas() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 font-medium">Cargando historial financiero...</p>
+          <p className="mt-4 text-gray-600 font-medium">Cargando sistema de facturación...</p>
         </div>
       </div>
     );
@@ -597,7 +597,7 @@ export function Facturas() {
                 Sesión requerida
               </h2>
               <p className="text-gray-600 mb-6">
-                Debes iniciar sesión para ver tu historial financiero.
+                Debes iniciar sesión para gestionar tus pagos y facturas.
               </p>
               <a
                 href="/login"
@@ -618,9 +618,9 @@ export function Facturas() {
 
       <div className="space-y-6">
         <div className="no-print">
-          <h1 className="text-3xl font-bold text-gray-900">Historial Financiero</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Gestión de Pagos y Facturas</h1>
           <p className="text-gray-600 mt-1">
-            Gestiona tus pagos y descarga tus facturas
+            Administra tus pagos pendientes y descarga tus facturas
           </p>
         </div>
 
