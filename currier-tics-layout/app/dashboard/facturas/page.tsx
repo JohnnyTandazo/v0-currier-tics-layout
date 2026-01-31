@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { Facturas } from "@/components/dashboards/facturas";
 
 /**
@@ -7,5 +8,9 @@ import { Facturas } from "@/components/dashboards/facturas";
  * Muestra el historial financiero completo del usuario
  */
 export default function FacturasPage() {
-  return <Facturas />;
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">Cargando sistema de facturación...</div>}>
+      <Facturas />
+    </Suspense>
+  );
 }
