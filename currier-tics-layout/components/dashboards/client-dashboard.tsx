@@ -12,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table"
-import { Package, Plane, MapPin, DollarSign, Bell, CreditCard, AlertCircle, Eye } from "lucide-react"
+import { Package, Plane, MapPin, DollarSign, Bell, CreditCard, AlertCircle, Eye, Plus } from "lucide-react"
+import { PreAlertModal } from "../modals/pre-alert-modal"
 
 interface Paquete {
   id: number
@@ -48,6 +49,7 @@ interface ClientDashboardProps {
 }
 
 export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
+  const [isPreAlertOpen, setIsPreAlertOpen] = useState(false)
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [paquetes, setPaquetes] = useState<Paquete[]>([])
   const [stats, setStats] = useState<Stats>({ 
@@ -206,14 +208,26 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Bienvenida */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Hola, {usuario.nombre}
-        </h1>
-        <p className="text-gray-600 mt-1">
-          Bienvenido a tu panel de control
-        </p>
+      {/* Header con Bienvenida y Botón Pre-Alertar */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Hola, {usuario.nombre}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Bienvenido a tu panel de control
+          </p>
+        </div>
+        
+        {/* Botón Pre-Alertar Paquete */}
+        <Button
+          onClick={() => setIsPreAlertOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+          size="lg"
+        >
+          <Plus className="h-5 w-5" />
+          📦 Pre-Alertar Paquete
+        </Button>
       </div>
 
       {/* Tarjetas de estadísticas con diseño profesional */}
@@ -379,6 +393,9 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Pre-Alertar */}
+      <PreAlertModal open={isPreAlertOpen} onOpenChange={setIsPreAlertOpen} />
     </div>
   )
 }

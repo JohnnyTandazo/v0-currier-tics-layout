@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
   Upload,
   CreditCard,
@@ -38,11 +38,19 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 
+interface Usuario {
+  id: number
+  nombre: string
+  email: string
+}
+
 interface FacturaPendiente {
   id: number
   numeroFactura: string
   total: number
   fechaVencimiento: string
+  usuarioId?: number
+  usuario?: { id: number }
 }
 
 interface PagoReciente {
@@ -53,6 +61,8 @@ interface PagoReciente {
   metodoPago: string
   estado: "VERIFICADO" | "PENDIENTE" | "RECHAZADO"
   referencia: string
+  usuarioId?: number
+  usuario?: { id: number }
 }
 
 interface FormData {
@@ -64,53 +74,11 @@ interface FormData {
   comprobante: File | null
 }
 
-// ✅ MOCK DATA
-const MOCK_FACTURAS_PENDIENTES: FacturaPendiente[] = [
-  {
-    id: 1,
-    numeroFactura: "FAC-2024-00157",
-    total: 142.80,
-    fechaVencimiento: "2024-02-18",
-  },
-  {
-    id: 2,
-    numeroFactura: "FAC-2024-00159",
-    total: 224.00,
-    fechaVencimiento: "2024-02-20",
-  },
-]
-
-const MOCK_PAGOS_RECIENTES: PagoReciente[] = [
-  {
-    id: 1,
-    fecha: "2024-01-22",
-    monto: 95.20,
-    facturaId: "FAC-2024-00156",
-    metodoPago: "Transferencia Bancaria",
-    estado: "VERIFICADO",
-    referencia: "TRF-2024-001234",
-  },
-  {
-    id: 2,
-    fecha: "2024-01-20",
-    monto: 70.00,
-    facturaId: "FAC-2024-00160",
-    metodoPago: "Tarjeta de Crédito",
-    estado: "VERIFICADO",
-    referencia: "TAR-2024-005678",
-  },
-  {
-    id: 3,
-    fecha: "2024-01-18",
-    monto: 50.40,
-    facturaId: "FAC-2024-00158",
-    metodoPago: "Efectivo",
-    estado: "PENDIENTE",
-    referencia: "EFC-2024-009012",
-  },
-]
-
 export function Pagos() {
+  const [usuario, setUsuario] = useState<Usuario | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [facturasPendientes, setFacturasPendientes] = useState<FacturaPendiente[]>([])
+  const [pagosRecientes, setPagosRecientes] = useState<PagoReciente[]>([])
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
@@ -122,6 +90,84 @@ export function Pagos() {
     notas: "",
     comprobante: null,
   })
+
+  // Obtener usuario del localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("usuario")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (parsed && parsed.id) {
+          setUsuario(parsed)
+        } else {
+          setLoading(false)
+        }
+      } else {
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error("Error parsing usuario:", err)
+      setLoading(false)
+    }
+  }, [])
+
+  // Fetch pagos SOLO si hay usuario.id válido
+  useEffect(() => {
+    if (!usuario || !usuario.id) {
+      setLoading(false)
+      return
+    }
+
+    const fetchData = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL
+        if (!apiUrl) {
+          setLoading(false)
+          return
+        }
+
+        // Fetch facturas pendientes
+        try {
+          const resFacturas = await fetch(`${apiUrl}/api/facturas`)
+          if (resFacturas.ok) {
+            const data = await resFacturas.json()
+            if (Array.isArray(data)) {
+              // FILTRO DE USUARIO OBLIGATORIO
+              const misFacturas = data.filter(
+                (f: FacturaPendiente) => String(f.usuarioId || f.usuario?.id) === String(usuario.id)
+              )
+              setFacturasPendientes(misFacturas)
+            }
+          }
+        } catch {
+          setFacturasPendientes([])
+        }
+
+        // Fetch pagos recientes
+        try {
+          const resPagos = await fetch(`${apiUrl}/api/pagos`)
+          if (resPagos.ok) {
+            const data = await resPagos.json()
+            if (Array.isArray(data)) {
+              // FILTRO DE USUARIO OBLIGATORIO
+              const misPagos = data.filter(
+                (p: PagoReciente) => String(p.usuarioId || p.usuario?.id) === String(usuario.id)
+              )
+              setPagosRecientes(misPagos)
+            }
+          }
+        } catch {
+          setPagosRecientes([])
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [usuario])
 
   const handleFormChange = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -154,7 +200,48 @@ export function Pagos() {
     return configs[estado] || configs.PENDIENTE
   }
 
-  const totalPendiente = MOCK_FACTURAS_PENDIENTES.reduce((acc, f) => acc + f.total, 0)
+  // Calcular totales usando SOLO datos filtrados del usuario
+  const totalPendiente = facturasPendientes.reduce((acc, f) => acc + (f.total || 0), 0)
+  const totalPagado = pagosRecientes.reduce((acc, p) => acc + (p.monto || 0), 0)
+
+  // Estado de carga
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Cargando pagos...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Sin sesión
+  if (!usuario) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                Sesión requerida
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Debes iniciar sesión para ver tus pagos.
+              </p>
+              <a
+                href="/login"
+                className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Iniciar Sesión
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -180,7 +267,7 @@ export function Pagos() {
                 <FileText className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{MOCK_FACTURAS_PENDIENTES.length}</p>
+                <p className="text-2xl font-bold">{facturasPendientes.length}</p>
                 <p className="text-xs text-muted-foreground">Facturas Pendientes</p>
               </div>
             </div>
@@ -194,7 +281,7 @@ export function Pagos() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {MOCK_PAGOS_RECIENTES.filter((p: PagoReciente) => p.estado === "VERIFICADO").length}
+                  {pagosRecientes.filter((p) => p.estado === "VERIFICADO").length}
                 </p>
                 <p className="text-xs text-muted-foreground">Pagos Verificados</p>
               </div>
@@ -242,12 +329,12 @@ export function Pagos() {
                     <SelectValue placeholder="Selecciona una factura pendiente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MOCK_FACTURAS_PENDIENTES.map((factura) => (
+                    {facturasPendientes.map((factura) => (
                       <SelectItem key={factura.id} value={factura.id.toString()}>
                         <div className="flex items-center justify-between gap-4">
                           <span>{factura.numeroFactura}</span>
                           <span className="text-muted-foreground">
-                            ${factura.total.toFixed(2)}
+                            ${(factura.total || 0).toFixed(2)}
                           </span>
                         </div>
                       </SelectItem>
@@ -408,8 +495,8 @@ export function Pagos() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {MOCK_PAGOS_RECIENTES.length > 0 ? (
-                  MOCK_PAGOS_RECIENTES.map((pago) => {
+                {pagosRecientes.length > 0 ? (
+                  pagosRecientes.map((pago) => {
                     const statusConfig = getStatusConfig(pago.estado)
                     return (
                       <TableRow key={pago.id} className="border-border/50">
@@ -433,7 +520,7 @@ export function Pagos() {
                         </TableCell>
                         <TableCell className="text-right">
                           <span className="font-semibold text-foreground">
-                            ${pago.monto.toFixed(2)}
+                            ${(pago.monto || 0).toFixed(2)}
                           </span>
                         </TableCell>
                         <TableCell>
