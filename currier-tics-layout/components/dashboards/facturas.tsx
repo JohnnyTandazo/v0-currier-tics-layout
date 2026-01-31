@@ -9,11 +9,16 @@ interface Paquete {
   trackingNumber: string;
   descripcion: string;
   precio: number;
+  usuarioId: number;
 }
 
 export function Facturas() {
   const [paquetes, setPaquetes] = useState<Paquete[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [usuario, setUsuario] = useState<{
+    id: number;
+    nombre: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchPaquetes = async () => {
@@ -29,7 +34,18 @@ export function Facturas() {
         }
 
         const data = await response.json();
-        setPaquetes(data);
+
+        const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+        if (!usuario || !usuario.id) {
+          console.error("Usuario no autenticado o inválido");
+          setPaquetes([]);
+          return;
+        }
+
+        const misPaquetes = data.filter((p: any) => p.usuarioId == usuario.id);
+        console.log("Facturas filtradas:", misPaquetes);
+
+        setPaquetes(misPaquetes);
       } catch (error) {
         console.error("Error al obtener paquetes:", error);
       } finally {
@@ -38,7 +54,7 @@ export function Facturas() {
     };
 
     fetchPaquetes();
-  }, []);
+  }, [usuario]);
 
   const imprimirFactura = () => {
     window.print();

@@ -28,6 +28,7 @@ interface Paquete {
   estado: string
   tipo_envio: string
   fechaRegistro?: string
+  usuarioId: number
 }
 
 export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
@@ -68,8 +69,12 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
         }
 
         const data = await response.json()
-        console.log("Paquetes obtenidos:", data)
-        setPaquetes(Array.isArray(data) ? data : [])
+
+        // Filtro de seguridad: Solo mostrar lo que pertenece a este usuario
+        const misPaquetes = data.filter((p: any) => p.usuarioId == usuarioId);
+        console.log("Paquetes filtrados:", misPaquetes);
+
+        setPaquetes(Array.isArray(misPaquetes) ? misPaquetes : [])
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         console.error("Error obteniendo paquetes:", errorMessage)

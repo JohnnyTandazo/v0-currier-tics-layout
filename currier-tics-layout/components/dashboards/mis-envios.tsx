@@ -40,6 +40,7 @@ interface Envio {
   estado: "EN_TRANSITO" | "ENTREGADO" | "RETENIDO" | "PROCESANDO" | "EN_ADUANA"
   peso: number
   descripcion: string
+  usuarioId: number
 }
 
 interface MisEnviosProps {
@@ -83,7 +84,12 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         }
 
         const data = await response.json()
-        const enviosNacionales = (Array.isArray(data) ? data : []).filter(
+
+        // Filtro de seguridad: Solo mostrar lo que pertenece a este usuario
+        const misEnvios = data.filter((p: any) => p.usuarioId == usuarioId)
+        console.log("Envíos filtrados:", misEnvios)
+
+        const enviosNacionales = (Array.isArray(misEnvios) ? misEnvios : []).filter(
           (pkg: { tipo_envio?: string }) => pkg.tipo_envio === "NACIONAL"
         )
         setEnvios(enviosNacionales)
