@@ -92,26 +92,38 @@ const nationalShipments = [
   },
 ]
 
+// Función auxiliar para darle color según el estado
+const getStatusColor = (estado: string) => {
+  if (estado === "PRE_ALERTADO") return "bg-slate-500"
+  if (estado === "EN_MIAMI") return "bg-blue-500"
+  if (estado === "ADUANA") return "bg-yellow-500"
+  if (estado === "ENTREGADO") return "bg-green-500"
+  return "bg-gray-500"
+}
+
 export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
   const [isPreAlertOpen, setIsPreAlertOpen] = useState(false)
   const [paquetes, setPaquetes] = useState<Paquete[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchPaquetes = async () => {
-      setIsLoading(true)
+      setLoading(true)
       setError(null)
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL
-        const userId = localStorage.getItem("userId") // Assuming userId is stored in localStorage
 
-        if (!apiUrl) {
-          throw new Error("NEXT_PUBLIC_API_URL no está configurada")
-        }
+      try {
+        const userId = localStorage.getItem("userId")
 
         if (!userId) {
-          throw new Error("Usuario no autenticado")
+          // Redirect to login if no user is found
+          window.location.href = "/"
+          return
+        }
+
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL
+        if (!apiUrl) {
+          throw new Error("NEXT_PUBLIC_API_URL no está configurada")
         }
 
         const url = `${apiUrl}/api/paquetes?userId=${userId}`
@@ -144,36 +156,17 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
         setError(errorMessage)
         setPaquetes([])
       } finally {
-        setIsLoading(false)
+        setLoading(false)
       }
     }
 
     fetchPaquetes()
   }, [])
 
-  // Función auxiliar para darle color según el estado
-  const getStatusColor = (estado: string) => {
-    if (estado === "PRE_ALERTADO") return "bg-slate-500"
-    if (estado === "EN_MIAMI") return "bg-blue-500"
-    if (estado === "ADUANA") return "bg-yellow-500"
-    if (estado === "ENTREGADO") return "bg-green-500"
-    return "bg-gray-500"
+  if (loading) {
+    return <div>Cargando panel...</div>
   }
 
-  // Mostrar estado de carga
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="flex items-center justify-center py-10">
-            <p className="text-muted-foreground">Cargando paquetes...</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Mostrar error si existe
   if (error) {
     return (
       <div className="space-y-6">
