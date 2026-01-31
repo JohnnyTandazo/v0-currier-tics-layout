@@ -305,11 +305,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                         {envio.trackingId}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(envio.fecha).toLocaleDateString("es-EC", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
+                        {formatearFecha(envio.fecha)}
                       </TableCell>
                       <TableCell>
                         <div>
