@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
 
     console.log("👤 [API] Usuario ID filtro:", usuarioId);
 
-    // ✅ PROXY AL BACKEND REAL
+    // ✅ PROXY AL BACKEND JAVA
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/api/paquetes`;
+    const endpoint = `${backendUrl}/envios`;
 
-    console.log("🌐 [API] Llamando a backend:", endpoint);
+    console.log("🌐 [API PROXY] Conectando con backend Java:", endpoint);
 
     const response = await fetch(endpoint, {
       method: "GET",
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     console.log("📋 [API] Datos del nuevo envío:", body);
 
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/api/paquetes`;
+    const endpoint = `${backendUrl}/envios`;
 
     const response = await fetch(endpoint, {
       method: "POST",

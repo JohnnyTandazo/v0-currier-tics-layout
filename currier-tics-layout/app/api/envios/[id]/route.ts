@@ -42,11 +42,11 @@ export async function GET(
 
     console.log("🔎 [API] Buscando envío con ID numérico:", id);
 
-    // ✅ LLAMADA AL BACKEND REAL
+    // ✅ PROXY AL BACKEND JAVA
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/api/paquetes/${id}`;
+    const endpoint = `${backendUrl}/envios/${id}`;
     
-    console.log("🌐 [API] Llamando a backend:", endpoint);
+    console.log("🌐 [API PROXY] Conectando con backend Java:", endpoint);
 
     const response = await fetch(endpoint, {
       method: "GET",
@@ -193,7 +193,7 @@ export async function PUT(
 
     // Llamar al backend
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/api/paquetes/${id}`;
+    const endpoint = `${backendUrl}/envios/${id}`;
 
     const response = await fetch(endpoint, {
       method: "PUT",
@@ -266,7 +266,7 @@ export async function DELETE(
     }
 
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/api/paquetes/${id}`;
+    const endpoint = `${backendUrl}/envios/${id}`;
 
     const response = await fetch(endpoint, {
       method: "DELETE",
