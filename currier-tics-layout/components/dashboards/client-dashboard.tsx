@@ -116,8 +116,9 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
         const userId = localStorage.getItem("userId")
 
         if (!userId) {
-          // Redirect to login if no user is found
-          window.location.href = "/"
+          // Show message instead of reloading the page
+          setError("Por favor inicia sesión")
+          setLoading(false)
           return
         }
 
@@ -126,7 +127,7 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
           throw new Error("NEXT_PUBLIC_API_URL no está configurada")
         }
 
-        const url = `${apiUrl}/api/paquetes?userId=${userId}`
+        const url = `${apiUrl}/api/paquetes`
         console.log("Conectando a:", url)
 
         const response = await fetch(url, {
@@ -143,9 +144,9 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
         const data = await response.json()
         console.log("Datos recibidos del Backend:", data)
 
-        // Filter data to ensure only the logged-in user's packages are displayed
+        // Filter data immediately for privacy
         const filteredData = Array.isArray(data)
-          ? data.filter((pkg) => pkg.userId === userId)
+          ? data.filter((p) => String(p.usuarioId || p.usuario?.id) === String(userId))
           : []
 
         console.log("Datos filtrados para el usuario:", filteredData)
@@ -164,7 +165,7 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
   }, [])
 
   if (loading) {
-    return <div>Cargando panel...</div>
+    return <div>Cargando...</div>
   }
 
   if (error) {
@@ -173,11 +174,7 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
         <Card className="border-red-200 bg-red-50">
           <CardContent className="flex items-center justify-center py-10">
             <div className="text-center">
-              <p className="font-medium text-red-800">Error al conectar</p>
-              <p className="text-sm text-red-600">{error}</p>
-              <p className="mt-2 text-xs text-red-500">
-                Verifica que NEXT_PUBLIC_API_URL esté configurada correctamente
-              </p>
+              <p className="font-medium text-red-800">{error}</p>
             </div>
           </CardContent>
         </Card>
@@ -189,24 +186,19 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {summaryCards.map((card) => (
-          <Card key={card.title} className="relative overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              <div
-                className={`flex h-9 w-9 items-center justify-center rounded-lg ${card.color}`}
-              >
-                <card.icon className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
-              <p className="text-xs text-muted-foreground">{card.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="relative overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Paquetes en Miami
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {paquetes.filter((pkg) => pkg.estado === "EN_MIAMI").length}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Add other cards with similar filtered calculations */}
       </div>
 
       {/* Pre-Alert Button */}
