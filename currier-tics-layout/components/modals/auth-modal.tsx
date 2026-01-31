@@ -37,14 +37,48 @@ export function AuthModal({
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!apiUrl) {
-        throw new Error("NEXT_PUBLIC_API_URL no está configurada")
+        throw new Error("NEXT_PUBLIC_API_URL no está configurada");
+      }
+
+      const response = await fetch(`${apiUrl}/api/usuarios/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem("usuario", JSON.stringify(data));
+        onOpenChange(false);
+        window.location.reload();
+      } else if (response.status === 401 || response.status === 404) {
+        alert("Correo o contraseña incorrectos");
+      } else {
+        throw new Error("Error desconocido al iniciar sesión");
+      }
+    } catch (error) {
+      console.error("Error en el login:", error);
+      alert("Error al iniciar sesión. Intenta de nuevo.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = mode === "login" ? handleLogin : async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        throw new Error("NEXT_PUBLIC_API_URL no está configurada");
       }
 
       // REGISTER: POST to /api/usuarios/registro
@@ -58,28 +92,29 @@ export function AuthModal({
           telefono: phone,
           rol: "CLIENTE",
         }),
-      })
+      });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(error.message || "No se pudo crear la cuenta")
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || "No se pudo crear la cuenta");
       }
 
-      const data = await response.json()
-      console.log("✅ Cuenta creada:", data)
+      const data = await response.json();
+      console.log("✅ Cuenta creada:", data);
 
       // Save to localStorage
-      localStorage.setItem("usuario", JSON.stringify(data))
+      localStorage.setItem("usuario", JSON.stringify(data));
 
       // Close modal and reload page
-      onSuccess()
+      onSuccess();
       setTimeout(() => {
-        window.location.reload()
-      }, 500)
+        window.location.reload();
+      }, 500);
     } catch (error) {
-      console.error("Error en autenticación:", error)
-      alert(`Error: ${error instanceof Error ? error.message : "Algo salió mal"}`)
-      setIsLoading(false)
+      console.error("Error en autenticación:", error);
+      alert(`Error: ${error instanceof Error ? error.message : "Algo salió mal"}`);
+    } finally {
+      setIsLoading(false);
     }
   }
 
