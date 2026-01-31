@@ -34,6 +34,7 @@ interface Paquete {
   descripcion: string
   pesoLibras: number
   estado: string
+  userId: string
 }
 
 const summaryCards = [
@@ -103,11 +104,17 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
       setError(null)
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL
+        const userId = localStorage.getItem("userId") // Assuming userId is stored in localStorage
+
         if (!apiUrl) {
           throw new Error("NEXT_PUBLIC_API_URL no está configurada")
         }
 
-        const url = `${apiUrl}/api/paquetes`
+        if (!userId) {
+          throw new Error("Usuario no autenticado")
+        }
+
+        const url = `${apiUrl}/api/paquetes?userId=${userId}`
         console.log("Conectando a:", url)
 
         const response = await fetch(url, {
@@ -123,7 +130,14 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
 
         const data = await response.json()
         console.log("Datos recibidos del Backend:", data)
-        setPaquetes(Array.isArray(data) ? data : [])
+
+        // Filter data to ensure only the logged-in user's packages are displayed
+        const filteredData = Array.isArray(data)
+          ? data.filter((pkg) => pkg.userId === userId)
+          : []
+
+        console.log("Datos filtrados para el usuario:", filteredData)
+        setPaquetes(filteredData)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         console.error("Error conectando al Backend:", errorMessage)

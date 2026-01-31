@@ -47,7 +47,13 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
           throw new Error("NEXT_PUBLIC_API_URL no está configurada")
         }
 
-        const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
+        const usuario = JSON.parse(localStorage.getItem("usuario") || "null")
+        if (!usuario || !usuario.id) {
+          console.error("Usuario no autenticado o inválido")
+          setPaquetes([])
+          return
+        }
+
         const usuarioId = usuario.id
 
         if (!usuarioId) {
@@ -69,12 +75,19 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
         }
 
         const data = await response.json()
+        console.log("USUARIO LOGUEADO:", usuario)
+        console.log("PRIMER PAQUETE RAW:", data[0])
 
-        // Filtro de seguridad: Solo mostrar lo que pertenece a este usuario
-        const misPaquetes = data.filter((p: any) => p.usuarioId == usuarioId);
-        console.log("Paquetes filtrados:", misPaquetes);
+        const misPaquetes = data.filter((p: any) => {
+          // Intentamos obtener el ID del paquete de varias formas posibles
+          const packUserId = p.usuarioId || p.usuario?.id || p.id_usuario
+          const myUserId = usuario.id || usuario.usuarioId
+          // Comparamos como Strings para evitar errores de tipo (3 vs "3")
+          return String(packUserId) === String(myUserId)
+        })
 
-        setPaquetes(Array.isArray(misPaquetes) ? misPaquetes : [])
+        console.log("PAQUETES FILTRADOS:", misPaquetes)
+        setPaquetes(misPaquetes)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         console.error("Error obteniendo paquetes:", errorMessage)

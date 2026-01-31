@@ -64,12 +64,14 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           throw new Error("NEXT_PUBLIC_API_URL is not configured")
         }
 
-        const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
-        const usuarioId = usuario.id
-
-        if (!usuarioId) {
-          throw new Error("User not authenticated")
+        const usuario = JSON.parse(localStorage.getItem("usuario") || "null")
+        if (!usuario || !usuario.id) {
+          console.error("Usuario no autenticado o inválido")
+          setEnvios([])
+          return
         }
+
+        const usuarioId = usuario.id
 
         const url = `${apiUrl}/api/paquetes?usuarioId=${usuarioId}`
         const response = await fetch(url, {
@@ -84,15 +86,19 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         }
 
         const data = await response.json()
+        console.log("USUARIO LOGUEADO:", usuario)
+        console.log("PRIMER ENVÍO RAW:", data[0])
 
-        // Filtro de seguridad: Solo mostrar lo que pertenece a este usuario
-        const misEnvios = data.filter((p: any) => p.usuarioId == usuarioId)
-        console.log("Envíos filtrados:", misEnvios)
+        const misEnvios = data.filter((p: any) => {
+          // Intentamos obtener el ID del paquete de varias formas posibles
+          const packUserId = p.usuarioId || p.usuario?.id || p.id_usuario
+          const myUserId = usuario.id || usuario.usuarioId
+          // Comparamos como Strings para evitar errores de tipo (3 vs "3")
+          return String(packUserId) === String(myUserId)
+        })
 
-        const enviosNacionales = (Array.isArray(misEnvios) ? misEnvios : []).filter(
-          (pkg: { tipo_envio?: string }) => pkg.tipo_envio === "NACIONAL"
-        )
-        setEnvios(enviosNacionales)
+        console.log("ENVÍOS FILTRADOS:", misEnvios)
+        setEnvios(misEnvios)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error")
         setEnvios([])
