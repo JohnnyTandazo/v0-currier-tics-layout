@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"
 import { Badge } from "../ui/badge"
@@ -50,6 +51,7 @@ interface ClientDashboardProps {
 }
 
 export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
+  const router = useRouter()
   const [isPreAlertOpen, setIsPreAlertOpen] = useState(false)
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [paqueteAPagar, setPaqueteAPagar] = useState<Paquete | null>(null)
@@ -194,12 +196,9 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
     }
   }
 
-  // Función para manejar pago real
-  const handlePagar = async (paqueteId: number) => {
-    const paquete = paquetes.find(p => p.id === paqueteId)
-    if (paquete) {
-      handleAbrirModalPago(paquete)
-    }
+  // Función para manejar pago - Redirigir a Facturas
+  const handlePagar = (paqueteId: number) => {
+    router.push(`/dashboard/facturas?action=pagar&id=${paqueteId}`)
   }
 
   // Función para formatear fecha

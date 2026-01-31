@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -109,10 +110,17 @@ const printStyles = `
       text-align: center;
       font-size: 10px;
     }
+    
+    .highlight-row {
+      background-color: #fef3c7 !important;
+    }
   }
 `;
 
 export function Facturas() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [paquetes, setPaquetes] = useState<Paquete[]>([]);
   const [paquetesFiltrados, setPaquetesFiltrados] = useState<Paquete[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +131,7 @@ export function Facturas() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paqueteAPagar, setPaqueteAPagar] = useState<Paquete | null>(null);
 
+  // Obtener usuario del localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem("usuario");
@@ -142,11 +151,51 @@ export function Facturas() {
     }
   }, []);
 
+  // Función MEJORADA para verificar si es pendiente de pago (CASE-INSENSITIVE)
+  const esPendientePago = (paquete: Paquete): boolean => {
+    // Normalizar estado
+    const estado = (paquete.estado || "").toUpperCase().trim();
+    
+    // Verificar si NO está pagado
+    const noPagado = paquete.pagado !== true;
+    
+    // Aceptar cualquier variación de estados pendientes
+    const esPorPagar = 
+      estado.includes("PAGAR") || 
+      estado.includes("DEUDA") || 
+      estado === "EN_BODEGA" ||
+      estado === "LIBERADO" ||
+      estado === "POR_PAGAR" ||
+      estado === "PORPAGAR";
+    
+    return noPagado && esPorPagar;
+  };
+
+  // Función MEJORADA para verificar si está pagado (CASE-INSENSITIVE)
+  const estaPagado = (paquete: Paquete): boolean => {
+    // Normalizar estado
+    const estado = (paquete.estado || "").toUpperCase().trim();
+    
+    // Aceptar cualquier variación de estados pagados
+    const esPagadoEstado = 
+      paquete.pagado === true ||
+      estado.includes("PAGADO") ||
+      estado.includes("ENTREGADO") ||
+      estado.includes("LIBERADO") ||
+      estado === "PAGADO" ||
+      estado === "ENTREGADO";
+    
+    return esPagadoEstado;
+  };
+
+  // Función MEJORADA para cargar paquetes con FILTRO MÁS AMPLIO
   const cargarPaquetes = async () => {
     if (!usuario || !usuario.id) return;
 
     try {
       setLoading(true);
+      console.log("🔄 Cargando paquetes para usuario:", usuario.id);
+      
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!apiUrl) {
         throw new Error("NEXT_PUBLIC_API_URL no está configurada");
@@ -159,34 +208,52 @@ export function Facturas() {
       }
 
       const data = await response.json();
+      console.log("📦 Datos recibidos del backend:", data);
 
       if (Array.isArray(data)) {
+        // FILTRADO ESTRICTO: Solo paquetes del usuario actual
         const misPaquetes = data.filter(
           (p: Paquete) =>
             String(p.usuarioId || p.usuario?.id) === String(usuario.id)
         );
 
-        const paquetesConPrecio = misPaquetes.filter(
-          (p) =>
-            p.precio && 
-            p.precio > 0 &&
-            (
-              p.estado?.toUpperCase() === "POR_PAGAR" ||
-              p.estado?.toUpperCase() === "PAGADO" ||
-              p.estado?.toUpperCase() === "ENTREGADO" ||
-              p.estado?.toUpperCase() === "LIBERADO" ||
-              p.pagado === true
-            )
-        );
+        console.log("👤 Paquetes del usuario:", misPaquetes);
 
-        setPaquetes(paquetesConPrecio);
-        aplicarFiltro(paquetesConPrecio, filtroActivo);
+        // FILTRADO AMPLIADO: Incluir paquetes con precio O con estados relevantes
+        const paquetesRelevantes = misPaquetes.filter((p) => {
+          // Normalizar estado
+          const estado = (p.estado || "").toUpperCase().trim();
+          
+          // Incluir si tiene precio
+          const tienePrecio = p.precio && p.precio > 0;
+          
+          // Incluir si es un estado financiero relevante (CASE-INSENSITIVE)
+          const esEstadoRelevante = 
+            estado.includes("PAGAR") ||
+            estado.includes("PAGADO") ||
+            estado.includes("ENTREGADO") ||
+            estado.includes("LIBERADO") ||
+            estado.includes("DEUDA") ||
+            estado === "EN_BODEGA";
+          
+          return tienePrecio || esEstadoRelevante;
+        });
+
+        console.log("💰 Paquetes con precio/estados relevantes:", paquetesRelevantes);
+
+        setPaquetes(paquetesRelevantes);
+        
+        // Aplicar filtro inicial
+        const filtroInicial = searchParams?.get("action") === "pagar" ? "pendientes" : "todas";
+        setFiltroActivo(filtroInicial as FiltroTab);
+        aplicarFiltro(paquetesRelevantes, filtroInicial as FiltroTab);
       } else {
+        console.warn("⚠️ Data no es array:", data);
         setPaquetes([]);
         setPaquetesFiltrados([]);
       }
     } catch (err) {
-      console.error("Error fetching paquetes:", err);
+      console.error("❌ Error fetching paquetes:", err);
       setPaquetes([]);
       setPaquetesFiltrados([]);
     } finally {
@@ -194,45 +261,59 @@ export function Facturas() {
     }
   };
 
+  // Fetch inicial de paquetes
   useEffect(() => {
     cargarPaquetes();
   }, [usuario]);
 
+  // Manejar query params para auto-abrir modal de pago
+  useEffect(() => {
+    const action = searchParams?.get("action");
+    const paqueteId = searchParams?.get("id");
+
+    if (action === "pagar" && paqueteId && paquetes.length > 0) {
+      const paquete = paquetes.find((p) => String(p.id) === paqueteId);
+      if (paquete && esPendientePago(paquete)) {
+        console.log("🔔 Auto-abriendo modal de pago para paquete:", paquete.tracking);
+        handleAbrirPago(paquete);
+        
+        // Limpiar query params
+        router.replace("/dashboard/facturas");
+      }
+    }
+  }, [searchParams, paquetes]);
+
+  // Aplicar filtro según tab seleccionado
   const aplicarFiltro = (paquetesBase: Paquete[], filtro: FiltroTab) => {
     let filtrados: Paquete[] = [];
+
+    console.log(`🔍 Aplicando filtro: ${filtro}`);
 
     switch (filtro) {
       case "todas":
         filtrados = paquetesBase;
         break;
       case "pendientes":
-        filtrados = paquetesBase.filter(
-          (p) =>
-            !p.pagado &&
-            (p.estado?.toUpperCase() === "POR_PAGAR" ||
-              p.estado?.toUpperCase() === "LIBERADO")
-        );
+        filtrados = paquetesBase.filter((p) => esPendientePago(p));
         break;
       case "pagadas":
-        filtrados = paquetesBase.filter(
-          (p) =>
-            p.pagado === true ||
-            p.estado?.toUpperCase() === "PAGADO" ||
-            p.estado?.toUpperCase() === "ENTREGADO"
-        );
+        filtrados = paquetesBase.filter((p) => estaPagado(p));
         break;
       default:
         filtrados = paquetesBase;
     }
 
+    console.log(`✅ Paquetes filtrados (${filtro}):`, filtrados);
     setPaquetesFiltrados(filtrados);
   };
 
+  // Manejar cambio de tab
   const handleCambiarFiltro = (filtro: FiltroTab) => {
     setFiltroActivo(filtro);
     aplicarFiltro(paquetes, filtro);
   };
 
+  // Formatear fecha
   const formatearFecha = (fecha?: string) => {
     if (!fecha) return "-";
     try {
@@ -248,6 +329,7 @@ export function Facturas() {
     }
   };
 
+  // Formatear fecha corta
   const formatearFechaCorta = (fecha?: string) => {
     if (!fecha) return "-";
     try {
@@ -261,12 +343,9 @@ export function Facturas() {
     }
   };
 
+  // Obtener badge de estado
   const getEstadoBadge = (paquete: Paquete) => {
-    const isPagado = paquete.pagado === true || 
-                     paquete.estado?.toUpperCase() === "PAGADO" || 
-                     paquete.estado?.toUpperCase() === "ENTREGADO";
-
-    if (isPagado) {
+    if (estaPagado(paquete)) {
       return (
         <Badge variant="default" className="bg-green-600">
           <CheckCircle className="h-3 w-3 mr-1" />
@@ -283,62 +362,78 @@ export function Facturas() {
     }
   };
 
-  const esPendientePago = (paquete: Paquete) => {
-    return (
-      !paquete.pagado &&
-      (paquete.estado?.toUpperCase() === "POR_PAGAR" ||
-        paquete.estado?.toUpperCase() === "LIBERADO")
-    );
-  };
-
-  const estaPagado = (paquete: Paquete) => {
-    return (
-      paquete.pagado === true ||
-      paquete.estado?.toUpperCase() === "PAGADO" ||
-      paquete.estado?.toUpperCase() === "ENTREGADO"
-    );
-  };
-
+  // Abrir modal de pago
   const handleAbrirPago = (paquete: Paquete) => {
+    console.log("💳 Abriendo modal de pago para paquete:", paquete);
     setPaqueteAPagar(paquete);
     setIsPaymentModalOpen(true);
   };
 
+  // Confirmar pago (CORREGIDO CON DEBUGGING)
   const handleConfirmarPago = async () => {
-    if (!paqueteAPagar) return;
+    if (!paqueteAPagar) {
+      console.error("❌ No hay paquete seleccionado para pagar");
+      return;
+    }
+
+    const paqueteId = paqueteAPagar.id;
+    console.log("🆔 ID del paquete a pagar:", paqueteId);
+
+    if (!paqueteId) {
+      alert("❌ Error: ID del paquete no válido");
+      return;
+    }
 
     try {
+      console.log("📤 Enviando solicitud de pago para paquete:", paqueteId);
+      
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!apiUrl) throw new Error("API URL no configurada");
 
-      const response = await fetch(`${apiUrl}/api/paquetes/${paqueteAPagar.id}`, {
+      const url = `${apiUrl}/api/paquetes/${paqueteId}`;
+      console.log("🌐 URL:", url);
+
+      const body = {
+        pagado: true,
+        estado: "PAGADO",
+        fechaPago: new Date().toISOString(),
+      };
+      console.log("📋 Body:", body);
+
+      const response = await fetch(url, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          pagado: true,
-          estado: "PAGADO",
-          fechaPago: new Date().toISOString(),
-        }),
+        body: JSON.stringify(body),
       });
 
+      console.log("📥 Respuesta del servidor:", response.status, response.statusText);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log("✅ Pago procesado exitosamente:", result);
+        
         setIsPaymentModalOpen(false);
         setPaqueteAPagar(null);
         alert("✅ Pago procesado correctamente. Puedes descargar tu factura.");
+        
+        // Recargar datos
         await cargarPaquetes();
       } else {
-        const errorData = await response.json();
-        const errorMessage = errorData.message || errorData.error || "Error desconocido";
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || `Error ${response.status}`;
+        
+        console.error("❌ Error del servidor:", errorData);
         alert(`❌ Error al procesar el pago: ${errorMessage}`);
       }
     } catch (error) {
-      console.error("Error al procesar pago:", error);
-      alert("❌ Error de conexión al procesar el pago");
+      console.error("❌ Error de red al procesar pago:", error);
+      alert("❌ Error de conexión al procesar el pago. Verifica tu conexión e intenta de nuevo.");
     }
   };
 
+  // Ver/Imprimir factura individual
   const handleImprimirFactura = (paquete: Paquete) => {
     setFacturaSeleccionada(paquete);
     setIsFacturaModalOpen(true);
@@ -348,6 +443,7 @@ export function Facturas() {
     }, 500);
   };
 
+  // Calcular totales
   const totalGeneral = paquetesFiltrados.reduce((sum, p) => sum + (p.precio || 0), 0);
   const totalPendiente = paquetes
     .filter((p) => esPendientePago(p))
@@ -356,9 +452,11 @@ export function Facturas() {
     .filter((p) => estaPagado(p))
     .reduce((sum, p) => sum + (p.precio || 0), 0);
 
+  // Contadores
   const cantidadPendientes = paquetes.filter((p) => esPendientePago(p)).length;
   const cantidadPagadas = paquetes.filter((p) => estaPagado(p)).length;
 
+  // Loading
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -370,6 +468,7 @@ export function Facturas() {
     );
   }
 
+  // Sin sesión
   if (!usuario) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -497,6 +596,15 @@ export function Facturas() {
                   {filtroActivo === "pagadas" && "No has realizado pagos aún"}
                   {filtroActivo === "todas" && "No tienes transacciones registradas"}
                 </p>
+                {paquetes.length > 0 && filtroActivo !== "todas" && (
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => handleCambiarFiltro("todas")}
+                  >
+                    Ver todas las transacciones
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -514,50 +622,56 @@ export function Facturas() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paquetesFiltrados.map((paquete) => (
-                      <TableRow key={paquete.id} className="hover:bg-gray-50">
-                        <TableCell className="text-gray-700 text-sm">
-                          {formatearFechaCorta(paquete.fechaPago || paquete.fechaCreacion || paquete.createdAt)}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm text-blue-600 font-medium">
-                          {paquete.tracking || paquete.trackingNumber}
-                        </TableCell>
-                        <TableCell className="text-gray-700 max-w-[250px] truncate">
-                          {paquete.descripcion || "Servicio de envío"}
-                        </TableCell>
-                        <TableCell className="font-semibold text-lg">
-                          ${paquete.precio?.toFixed(2) || "0.00"}
-                        </TableCell>
-                        <TableCell>{getEstadoBadge(paquete)}</TableCell>
-                        <TableCell className="text-right no-print">
-                          <div className="flex items-center justify-end gap-2">
-                            {esPendientePago(paquete) && (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => handleAbrirPago(paquete)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                <DollarSign className="h-4 w-4 mr-1" />
-                                Pagar
-                              </Button>
-                            )}
+                    {paquetesFiltrados.map((paquete) => {
+                      const isHighlighted = searchParams?.get("id") === String(paquete.id);
+                      return (
+                        <TableRow 
+                          key={paquete.id} 
+                          className={`hover:bg-gray-50 ${isHighlighted ? "bg-yellow-50 highlight-row" : ""}`}
+                        >
+                          <TableCell className="text-gray-700 text-sm">
+                            {formatearFechaCorta(paquete.fechaPago || paquete.fechaCreacion || paquete.createdAt)}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm text-blue-600 font-medium">
+                            {paquete.tracking || paquete.trackingNumber}
+                          </TableCell>
+                          <TableCell className="text-gray-700 max-w-[250px] truncate">
+                            {paquete.descripcion || "Servicio de envío"}
+                          </TableCell>
+                          <TableCell className="font-semibold text-lg">
+                            ${paquete.precio?.toFixed(2) || "0.00"}
+                          </TableCell>
+                          <TableCell>{getEstadoBadge(paquete)}</TableCell>
+                          <TableCell className="text-right no-print">
+                            <div className="flex items-center justify-end gap-2">
+                              {esPendientePago(paquete) && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleAbrirPago(paquete)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  <DollarSign className="h-4 w-4 mr-1" />
+                                  Pagar
+                                </Button>
+                              )}
 
-                            {estaPagado(paquete) && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleImprimirFactura(paquete)}
-                                className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                              >
-                                <Printer className="h-4 w-4 mr-1" />
-                                Imprimir
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                              {estaPagado(paquete) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleImprimirFactura(paquete)}
+                                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                >
+                                  <Printer className="h-4 w-4 mr-1" />
+                                  Imprimir
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
 
