@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   AlertCircle,
   Filter,
+  Loader2,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -30,6 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { safeFetch } from "@/lib/safeFetch"
+import { formatearFecha } from "@/lib/formatDate"
 
 interface Envio {
   id: number
@@ -80,18 +83,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         }
 
         const url = `${apiUrl}/api/paquetes`
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`)
-        }
-
-        const data = await response.json()
+        const data = await safeFetch(url)
         
         // Verificar que data sea un array antes de filtrar
         if (!Array.isArray(data)) {
@@ -146,7 +138,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
           <p className="mt-4 text-gray-600 font-medium">Cargando envíos...</p>
         </div>
       </div>

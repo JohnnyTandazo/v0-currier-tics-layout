@@ -13,7 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table"
-import { Package, Plane, MapPin, DollarSign, Bell, CreditCard, AlertCircle, Eye, Plus } from "lucide-react"
+import { Package, Plane, MapPin, DollarSign, Bell, CreditCard, AlertCircle, Eye, Plus, Loader2 } from "lucide-react"
+import { safeFetch } from "@/lib/safeFetch"
+import { formatearFecha } from "@/lib/formatDate"
 import { PreAlertModal } from "../modals/pre-alert-modal"
 import { PaymentModal } from "./payment-modal"
 
@@ -82,18 +84,8 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
         throw new Error("NEXT_PUBLIC_API_URL no está configurada")
       }
 
-      const res = await fetch(`${apiUrl}/api/paquetes`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (!res.ok) {
-        throw new Error("Error al obtener paquetes")
-      }
-
-      const data = await res.json()
+      // Usar safeFetch para evitar errores de JSON parsing
+      const data = await safeFetch(`${apiUrl}/api/paquetes`)
 
       // Verificar que data sea un array
       if (!Array.isArray(data)) {
@@ -201,20 +193,6 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
     router.push(`/dashboard/facturas?action=pagar&id=${paqueteId}`)
   }
 
-  // Función para formatear fecha
-  const formatearFecha = (fecha?: string) => {
-    if (!fecha) return "-"
-    try {
-      return new Date(fecha).toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    } catch {
-      return "-"
-    }
-  }
-
   // Verificar si debe mostrar botón de pagar
   const mostrarBotonPagar = (paquete: Paquete) => {
     const estadoNormalizado = paquete.estado?.toUpperCase() || ""
@@ -226,8 +204,8 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 font-medium">Cargando panel...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-600 font-medium">Cargando datos...</p>
         </div>
       </div>
     )

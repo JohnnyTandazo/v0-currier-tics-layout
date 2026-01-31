@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Package, Eye, Trash2, AlertCircle } from "lucide-react"
+import { Package, Eye, Trash2, AlertCircle, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
+import { safeFetch } from "@/lib/safeFetch"
+import { formatearFecha } from "@/lib/formatDate"
 
 interface MisPaquetesProps {
   onViewTracking: (trackingId: string) => void
@@ -63,18 +65,7 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
         const url = `${apiUrl}/api/paquetes?usuarioId=${usuarioId}`
         console.log("Obteniendo paquetes del usuario:", url)
 
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`)
-        }
-
-        const data = await response.json()
+        const data = await safeFetch(url)
         console.log("USUARIO LOGUEADO:", usuario)
         console.log("PRIMER PAQUETE RAW:", data[0])
 
@@ -121,12 +112,11 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="flex items-center justify-center py-10">
-            <p className="text-muted-foreground">Cargando tus paquetes...</p>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-600 font-medium">Cargando paquetes...</p>
+        </div>
       </div>
     )
   }

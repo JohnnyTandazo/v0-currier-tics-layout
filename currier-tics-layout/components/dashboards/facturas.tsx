@@ -21,9 +21,13 @@ import {
   CheckCircle,
   Clock,
   Building,
-  CreditCard
+  CreditCard,
+  Download,
+  FileDown
 } from "lucide-react";
 import { PaymentModal } from "./payment-modal";
+import { safeFetch } from "@/lib/safeFetch";
+import { formatearFecha, formatearFechaCorta, formatearFechaHora } from "@/lib/formatDate";
 
 interface Paquete {
   id: number;
@@ -201,13 +205,7 @@ export function Facturas() {
         throw new Error("NEXT_PUBLIC_API_URL no está configurada");
       }
 
-      const response = await fetch(`${apiUrl}/api/paquetes`);
-
-      if (!response.ok) {
-        throw new Error("Error al obtener paquetes");
-      }
-
-      const data = await response.json();
+      const data = await safeFetch(`${apiUrl}/api/paquetes`);
       console.log("📦 Datos recibidos del backend:", data);
 
       if (Array.isArray(data)) {
@@ -313,36 +311,6 @@ export function Facturas() {
     aplicarFiltro(paquetes, filtro);
   };
 
-  // Formatear fecha
-  const formatearFecha = (fecha?: string) => {
-    if (!fecha) return "-";
-    try {
-      return new Date(fecha).toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return "-";
-    }
-  };
-
-  // Formatear fecha corta
-  const formatearFechaCorta = (fecha?: string) => {
-    if (!fecha) return "-";
-    try {
-      return new Date(fecha).toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-    } catch {
-      return "-";
-    }
-  };
-
   // Obtener badge de estado
   const getEstadoBadge = (paquete: Paquete) => {
     if (estaPagado(paquete)) {
@@ -400,7 +368,7 @@ export function Facturas() {
       };
       console.log("📋 Body:", body);
 
-      const response = await fetch(url, {
+      const result = await safeFetch(url, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -408,25 +376,14 @@ export function Facturas() {
         body: JSON.stringify(body),
       });
 
-      console.log("📥 Respuesta del servidor:", response.status, response.statusText);
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log("✅ Pago procesado exitosamente:", result);
+    console.log("✅ Pago procesado exitosamente:", result);
         
-        setIsPaymentModalOpen(false);
-        setPaqueteAPagar(null);
-        alert("✅ Pago procesado correctamente. Puedes descargar tu factura.");
-        
-        // Recargar datos
-        await cargarPaquetes();
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || errorData.error || `Error ${response.status}`;
-        
-        console.error("❌ Error del servidor:", errorData);
-        alert(`❌ Error al procesar el pago: ${errorMessage}`);
-      }
+      setIsPaymentModalOpen(false);
+      setPaqueteAPagar(null);
+      alert("✅ Pago procesado correctamente. Puedes descargar tu factura.");
+      
+      // Recargar datos
+      await cargarPaquetes();
     } catch (error) {
       console.error("❌ Error de red al procesar pago:", error);
       alert("❌ Error de conexión al procesar el pago. Verifica tu conexión e intenta de nuevo.");
@@ -440,6 +397,166 @@ export function Facturas() {
     
     setTimeout(() => {
       window.print();
+    }, 500);
+  };
+
+  // NUEVO: Imprimir reporte de todos los pagos
+  const handleImprimirReporte = () => {
+    const paquetesPagados = paquetes.filter((p) => estaPagado(p));
+    
+    if (paquetesPagados.length === 0) {
+      alert("⚠️ No hay pagos realizados para generar el reporte");
+      return;
+    }
+
+    // Cambiar a la tab de pagadas antes de imprimir
+    setFiltroActivo("pagadas");
+    aplicarFiltro(paquetes, "pagadas");
+    
+    setTimeout(() => {
+      window.print();
+    }, 300);
+  };
+
+  // NUEVO: Descargar PDF individual (simulación con ventana)
+  const handleDescargarPDF = (paquete: Paquete) => {
+    const ventana = window.open("", "_blank", "width=800,height=600");
+    if (!ventana) {
+      alert("⚠️ Por favor, permite ventanas emergentes para descargar el PDF");
+      return;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Factura #${paquete.id.toString().padStart(6, "0")}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 40px;
+              max-width: 800px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 3px solid #2563eb;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .header h1 {
+              color: #2563eb;
+              margin: 0;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 20px;
+              margin-bottom: 30px;
+            }
+            .info-box {
+              border: 1px solid #e5e7eb;
+              padding: 15px;
+              border-radius: 8px;
+              background: #f9fafb;
+            }
+            .info-box h3 {
+              margin: 0 0 10px 0;
+              color: #374151;
+              font-size: 14px;
+              text-transform: uppercase;
+            }
+            .info-box p {
+              margin: 5px 0;
+              color: #1f2937;
+            }
+            .total-box {
+              background: #dbeafe;
+              border: 2px solid #2563eb;
+              padding: 20px;
+              border-radius: 8px;
+              text-align: right;
+              margin-top: 30px;
+            }
+            .total-box .amount {
+              font-size: 36px;
+              color: #16a34a;
+              font-weight: bold;
+            }
+            .badge {
+              display: inline-block;
+              padding: 5px 15px;
+              border-radius: 20px;
+              background: #16a34a;
+              color: white;
+              font-size: 12px;
+              font-weight: bold;
+            }
+            .footer {
+              margin-top: 50px;
+              padding-top: 20px;
+              border-top: 2px solid #e5e7eb;
+              text-align: center;
+              color: #6b7280;
+              font-size: 12px;
+            }
+            @media print {
+              body { padding: 20px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🏢 COURIER EXPRESS</h1>
+            <p style="margin: 5px 0;">Sistema de Gestión de Paquetes</p>
+            <p style="margin: 5px 0; font-size: 12px;">Email: info@courierexpress.com | Tel: +1 (305) 123-4567</p>
+            <h2 style="margin-top: 20px; color: #2563eb;">FACTURA #${paquete.id.toString().padStart(6, "0")}</h2>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-box">
+              <h3>Facturado a:</h3>
+              <p><strong>${usuario?.nombre || "Cliente"}</strong></p>
+              <p>${usuario?.email || ""}</p>
+            </div>
+            <div class="info-box">
+              <h3>Fecha de Pago:</h3>
+              <p><strong>${formatearFecha(paquete.fechaPago || paquete.createdAt)}</strong></p>
+              <p>Estado: <span class="badge">✓ PAGADO</span></p>
+            </div>
+          </div>
+
+          <div class="info-box">
+            <h3>Detalles del Servicio:</h3>
+            <p><strong>Tracking:</strong> ${paquete.tracking || paquete.trackingNumber}</p>
+            <p><strong>Descripción:</strong> ${paquete.descripcion || "Servicio de envío internacional"}</p>
+            <p><strong>Peso:</strong> ${paquete.peso ? `${paquete.peso} lbs` : "N/A"}</p>
+            <p><strong>Fecha de Registro:</strong> ${formatearFecha(paquete.fechaCreacion || paquete.createdAt)}</p>
+          </div>
+
+          <div class="total-box">
+            <p style="margin: 0; color: #374151;">TOTAL PAGADO</p>
+            <div class="amount">$${paquete.precio?.toFixed(2) || "0.00"}</div>
+          </div>
+
+          <div class="footer">
+            <p>✓ Pago Verificado y Procesado</p>
+            <p>Gracias por usar nuestros servicios de envío internacional</p>
+            <p style="margin-top: 10px;">
+              Esta factura fue generada electrónicamente el ${formatearFecha(new Date().toISOString())}
+            </p>
+            <p><strong>Para consultas: soporte@courierexpress.com</strong></p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    ventana.document.write(html);
+    ventana.document.close();
+    
+    // Esperar a que cargue y luego imprimir/descargar
+    setTimeout(() => {
+      ventana.print();
     }, 500);
   };
 
@@ -568,19 +685,32 @@ export function Facturas() {
                 Transacciones
               </CardTitle>
 
-              <Tabs value={filtroActivo} onValueChange={(v) => handleCambiarFiltro(v as FiltroTab)}>
-                <TabsList className="grid w-full md:w-auto grid-cols-3">
-                  <TabsTrigger value="todas" className="text-xs md:text-sm">
-                    Todas ({paquetes.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="pendientes" className="text-xs md:text-sm">
-                    Pendientes ({cantidadPendientes})
-                  </TabsTrigger>
-                  <TabsTrigger value="pagadas" className="text-xs md:text-sm">
-                    Pagadas ({cantidadPagadas})
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <div className="flex flex-col md:flex-row items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImprimirReporte}
+                  disabled={cantidadPagadas === 0}
+                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 border-blue-300"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  📄 Reporte de Pagos
+                </Button>
+
+                <Tabs value={filtroActivo} onValueChange={(v) => handleCambiarFiltro(v as FiltroTab)}>
+                  <TabsList className="grid w-full md:w-auto grid-cols-3">
+                    <TabsTrigger value="todas" className="text-xs md:text-sm">
+                      Todas ({paquetes.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="pendientes" className="text-xs md:text-sm">
+                      Pendientes ({cantidadPendientes})
+                    </TabsTrigger>
+                    <TabsTrigger value="pagadas" className="text-xs md:text-sm">
+                      Pagadas ({cantidadPagadas})
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
             </div>
           </CardHeader>
 
@@ -657,15 +787,26 @@ export function Facturas() {
                               )}
 
                               {estaPagado(paquete) && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleImprimirFactura(paquete)}
-                                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                                >
-                                  <Printer className="h-4 w-4 mr-1" />
-                                  Imprimir
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleImprimirFactura(paquete)}
+                                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                  >
+                                    <Printer className="h-4 w-4 mr-1" />
+                                    Imprimir
+                                  </Button>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => handleDescargarPDF(paquete)}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <Download className="h-4 w-4 mr-1" />
+                                    PDF
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </TableCell>
