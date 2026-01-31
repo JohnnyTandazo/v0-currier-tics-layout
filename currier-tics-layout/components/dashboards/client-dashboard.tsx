@@ -3,7 +3,30 @@
 import React, { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Button } from "../ui/button"
-import { Package, Plane, MapPin, DollarSign, Bell, CreditCard, AlertCircle } from "lucide-react"
+import { Badge } from "../ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table"
+import { Package, Plane, MapPin, DollarSign, Bell, CreditCard, AlertCircle, Eye } from "lucide-react"
+
+interface Paquete {
+  id: number
+  trackingNumber?: string
+  tracking?: string
+  descripcion: string
+  estado: string
+  usuarioId?: number
+  usuario?: { id: number }
+  precio?: number
+  pagado?: boolean
+  fechaCreacion?: string
+  createdAt?: string
+}
 
 interface Stats {
   miami: number
@@ -26,6 +49,7 @@ interface ClientDashboardProps {
 
 export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
+  const [paquetes, setPaquetes] = useState<Paquete[]>([])
   const [stats, setStats] = useState<Stats>({ 
     miami: 0, 
     enCamino: 0, 
@@ -75,6 +99,9 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
           (p: any) => String(p.usuarioId || p.usuario?.id) === String(userStored.id)
         )
 
+        // Guardar los paquetes filtrados para la tabla
+        setPaquetes(misDatos)
+
         // CALCULAR ESTADÍSTICAS SOLO CON MIS DATOS
         setStats({
           totalPaquetes: misDatos.length,
@@ -99,6 +126,44 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
 
     cargarDatos()
   }, [])
+
+  // Función para obtener el badge del estado
+  const getEstadoBadge = (estado: string) => {
+    const estadoNormalizado = estado?.toUpperCase() || ""
+    const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
+      EN_MIAMI: { variant: "secondary", label: "En Miami" },
+      PRE_ALERTADO: { variant: "outline", label: "Pre-alertado" },
+      PRE_ALERTA: { variant: "outline", label: "Pre-alerta" },
+      EN_TRANSITO: { variant: "default", label: "En Tránsito" },
+      ENTREGADO: { variant: "secondary", label: "Entregado" },
+      POR_PAGAR: { variant: "destructive", label: "Por Pagar" },
+      ADUANA: { variant: "destructive", label: "En Aduana" },
+      PENDIENTE: { variant: "secondary", label: "Pendiente" },
+    }
+
+    const { variant, label } = config[estadoNormalizado] || { variant: "outline" as const, label: estado }
+    return <Badge variant={variant}>{label}</Badge>
+  }
+
+  // Función para formatear fecha
+  const formatearFecha = (fecha?: string) => {
+    if (!fecha) return "-"
+    try {
+      return new Date(fecha).toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    } catch {
+      return "-"
+    }
+  }
+
+  // Verificar si debe mostrar botón de pagar
+  const mostrarBotonPagar = (paquete: Paquete) => {
+    const estadoNormalizado = paquete.estado?.toUpperCase() || ""
+    return (estadoNormalizado === "POR_PAGAR" || estadoNormalizado === "ENTREGADO" || estadoNormalizado === "ADUANA") && !paquete.pagado
+  }
 
   // Estado de carga con spinner
   if (loading) {
@@ -237,6 +302,83 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Tabla de Envíos Recientes */}
+      <Card className="shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <Package className="h-5 w-5 text-blue-600" />
+            Envíos Recientes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {paquetes.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">No tienes envíos registrados</p>
+              <p className="text-gray-400 text-sm mt-1">
+                Tus paquetes aparecerán aquí cuando sean registrados
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-semibold">Tracking</TableHead>
+                    <TableHead className="font-semibold">Descripción</TableHead>
+                    <TableHead className="font-semibold">Estado</TableHead>
+                    <TableHead className="font-semibold">Fecha</TableHead>
+                    <TableHead className="font-semibold text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paquetes.slice(0, 10).map((paquete) => (
+                    <TableRow key={paquete.id} className="hover:bg-gray-50">
+                      <TableCell className="font-mono text-sm text-blue-600 font-medium">
+                        {paquete.trackingNumber || paquete.tracking || "-"}
+                      </TableCell>
+                      <TableCell className="text-gray-700 max-w-[200px] truncate">
+                        {paquete.descripcion || "Sin descripción"}
+                      </TableCell>
+                      <TableCell>
+                        {getEstadoBadge(paquete.estado)}
+                      </TableCell>
+                      <TableCell className="text-gray-600 text-sm">
+                        {formatearFecha(paquete.fechaCreacion || paquete.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onViewTracking(paquete.trackingNumber || paquete.tracking || "")}
+                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Rastrear
+                          </Button>
+                          {mostrarBotonPagar(paquete) && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => alert(`Redirigiendo a pagos para paquete ${paquete.id}`)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <DollarSign className="h-4 w-4 mr-1" />
+                              Pagar
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
