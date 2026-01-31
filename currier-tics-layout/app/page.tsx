@@ -5,7 +5,7 @@ import { LandingPage } from "@/components/landing-page"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export type UserRole = "client" | "operator" | "tracking"
-export type ClientView = "dashboard" | "envios" | "facturas" | "pagos" | "notificaciones" | "configuracion"
+export type ClientView = "dashboard" | "envios" | "facturas" | "paquetes" | "pagos" | "notificaciones" | "configuracion"
 
 // Dynamically import the entire DashboardLayout component
 // This ensures SidebarProvider and all sidebar hooks are only loaded when needed

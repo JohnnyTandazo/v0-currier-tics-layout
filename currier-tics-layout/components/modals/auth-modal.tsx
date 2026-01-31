@@ -47,64 +47,35 @@ export function AuthModal({
         throw new Error("NEXT_PUBLIC_API_URL no está configurada")
       }
 
-      if (mode === "login") {
-        // LOGIN: POST to /api/usuarios/login
-        const response = await fetch(`${apiUrl}/api/usuarios/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        })
+      // REGISTER: POST to /api/usuarios/registro
+      const response = await fetch(`${apiUrl}/api/usuarios/registro`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: fullName,
+          email: email,
+          password: password,
+          telefono: phone,
+          rol: "CLIENTE",
+        }),
+      })
 
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}))
-          throw new Error(error.message || "Credenciales incorrectas")
-        }
-
-        const data = await response.json()
-
-        // Save to localStorage
-        localStorage.setItem("usuario", JSON.stringify(data))
-        console.log("Usuario autenticado:", data)
-
-        // Close modal and reload page
-        onSuccess()
-        setTimeout(() => {
-          window.location.reload()
-        }, 500)
-      } else {
-        // REGISTER: POST to /api/usuarios/registro
-        const response = await fetch(`${apiUrl}/api/usuarios/registro`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nombre: fullName,
-            email: email,
-            password: password,
-            telefono: phone,
-            rol: "CLIENTE",
-          }),
-        })
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}))
-          throw new Error(error.message || "No se pudo crear la cuenta")
-        }
-
-        const data = await response.json()
-        console.log("✅ Cuenta creada:", data)
-
-        // Save to localStorage
-        localStorage.setItem("usuario", JSON.stringify(data))
-
-        // Show success message
-        alert("¡Cuenta creada con éxito! Iniciando sesión...")
-
-        // Close modal and reload page
-        onSuccess()
-        setTimeout(() => {
-          window.location.reload()
-        }, 500)
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.message || "No se pudo crear la cuenta")
       }
+
+      const data = await response.json()
+      console.log("✅ Cuenta creada:", data)
+
+      // Save to localStorage
+      localStorage.setItem("usuario", JSON.stringify(data))
+
+      // Close modal and reload page
+      onSuccess()
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
     } catch (error) {
       console.error("Error en autenticación:", error)
       alert(`Error: ${error instanceof Error ? error.message : "Algo salió mal"}`)

@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { ClientDashboard } from "@/components/dashboards/client-dashboard"
 import { OperatorDashboard } from "@/components/dashboards/operator-dashboard"
 import { TrackingTimeline } from "@/components/dashboards/tracking-timeline"
+import { MisPaquetes } from "@/components/dashboards/mis-paquetes"
 import { MisEnvios } from "@/components/dashboards/mis-envios"
 import { Facturas } from "@/components/dashboards/facturas"
 import { Pagos } from "@/components/dashboards/pagos"
@@ -23,7 +24,7 @@ import {
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { UserRole, ClientView } from "@/app/page"
+import type { UserRole } from "@/app/page";
 
 interface DashboardLayoutProps {
   user: any
@@ -47,10 +48,13 @@ const clientViewLabels: Record<ClientView, string> = {
   dashboard: "Panel Principal",
   envios: "Mis Envios",
   facturas: "Facturas",
+  paquetes: "Mis Paquetes",
   pagos: "Pagos",
   notificaciones: "Notificaciones",
   configuracion: "Configuración",
 }
+
+export type ClientView = "dashboard" | "envios" | "facturas" | "paquetes" | "pagos" | "notificaciones" | "configuracion";
 
 export default function DashboardLayout({
   user,
@@ -99,6 +103,9 @@ export default function DashboardLayout({
           {currentRole === "client" && currentClientView === "facturas" && (
             <Facturas />
           )}
+          {currentRole === "client" && currentClientView === "paquetes" && (
+            <MisPaquetes onViewTracking={onViewTracking} />
+          )}
           {currentRole === "client" && currentClientView === "pagos" && (
             <Pagos />
           )}
@@ -108,7 +115,9 @@ export default function DashboardLayout({
           {currentRole === "client" && currentClientView === "configuracion" && (
             <Configuracion />
           )}
-          {currentRole === "operator" && <OperatorDashboard />}
+          {currentRole === "operator" && (
+            <OperatorDashboard />
+          )}
           {currentRole === "tracking" && (
             <TrackingTimeline
               trackingId={selectedTrackingId || "TRK-2024-001234"}

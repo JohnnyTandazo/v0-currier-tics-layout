@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import {
   Search,
   Eye,
@@ -8,6 +8,7 @@ import {
   Truck,
   CheckCircle,
   AlertTriangle,
+  AlertCircle,
   Filter,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -45,107 +46,98 @@ interface MisEnviosProps {
   onViewDetails?: (trackingId: string) => void
 }
 
-// ✅ MOCK DATA - No hay llamadas a API
-const MOCK_ENVIOS: Envio[] = [
-  {
-    id: 1,
-    trackingId: "TRK-2024-001234",
-    fecha: "2024-01-15",
-    destinatario: "Juan Pérez",
-    direccion: "Av. Principal 123, Quito",
-    estado: "EN_TRANSITO",
-    peso: 2.5,
-    descripcion: "Electrónicos - Laptop",
-  },
-  {
-    id: 2,
-    trackingId: "TRK-2024-001235",
-    fecha: "2024-01-14",
-    destinatario: "María García",
-    direccion: "Calle Secundaria 456, Guayaquil",
-    estado: "ENTREGADO",
-    peso: 1.2,
-    descripcion: "Ropa y accesorios",
-  },
-  {
-    id: 3,
-    trackingId: "TRK-2024-001236",
-    fecha: "2024-01-13",
-    destinatario: "Carlos López",
-    direccion: "Jr. Los Pinos 789, Cuenca",
-    estado: "RETENIDO",
-    peso: 5.0,
-    descripcion: "Muebles - Escritorio",
-  },
-  {
-    id: 4,
-    trackingId: "TRK-2024-001237",
-    fecha: "2024-01-12",
-    destinatario: "Ana Martínez",
-    direccion: "Av. Central 321, Quito",
-    estado: "EN_ADUANA",
-    peso: 3.8,
-    descripcion: "Accesorios electrónicos",
-  },
-  {
-    id: 5,
-    trackingId: "TRK-2024-001238",
-    fecha: "2024-01-11",
-    destinatario: "Pedro Sánchez",
-    direccion: "Calle Norte 654, Manta",
-    estado: "PROCESANDO",
-    peso: 0.8,
-    descripcion: "Documentos importantes",
-  },
-]
-
 export function MisEnvios({ onViewDetails }: MisEnviosProps) {
+  const [envios, setEnvios] = useState<Envio[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  const getStatusConfig = (estado: string) => {
-    const configs: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
-      EN_TRANSITO: {
-        color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-        icon: <Truck className="h-3 w-3" />,
-        label: "En Tránsito",
-      },
-      ENTREGADO: {
-        color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-        icon: <CheckCircle className="h-3 w-3" />,
-        label: "Entregado",
-      },
-      RETENIDO: {
-        color: "bg-red-500/20 text-red-400 border-red-500/30",
-        icon: <AlertTriangle className="h-3 w-3" />,
-        label: "Retenido",
-      },
-      EN_ADUANA: {
-        color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-        icon: <Package className="h-3 w-3" />,
-        label: "En Aduana",
-      },
-      PROCESANDO: {
-        color: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-        icon: <Filter className="h-3 w-3" />,
-        label: "Procesando",
-      },
+  useEffect(() => {
+    const fetchEnvios = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL
+        if (!apiUrl) {
+          throw new Error("NEXT_PUBLIC_API_URL is not configured")
+        }
+
+        const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
+        const usuarioId = usuario.id
+
+        if (!usuarioId) {
+          throw new Error("User not authenticated")
+        }
+
+        const url = `${apiUrl}/api/paquetes?usuarioId=${usuarioId}`
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        const enviosNacionales = (Array.isArray(data) ? data : []).filter(
+          (pkg: { tipo_envio?: string }) => pkg.tipo_envio === "NACIONAL"
+        )
+        setEnvios(enviosNacionales)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error")
+        setEnvios([])
+      } finally {
+        setIsLoading(false)
+      }
     }
-    return configs[estado] || configs.PROCESANDO
-  }
+
+    fetchEnvios()
+  }, [])
 
   const filteredEnvios = useMemo(() => {
-    return MOCK_ENVIOS.filter((envio) => {
+    return envios.filter((envio) => {
       const matchesSearch =
         envio.trackingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         envio.destinatario.toLowerCase().includes(searchTerm.toLowerCase()) ||
         envio.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
-      
+
       const matchesStatus = statusFilter === "all" || envio.estado === statusFilter
-      
+
       return matchesSearch && matchesStatus
     })
-  }, [searchTerm, statusFilter])
+  }, [envios, searchTerm, statusFilter])
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-10">
+            <p className="text-muted-foreground">Loading your shipments...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex items-center justify-center py-10">
+            <div className="text-center">
+              <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+              <p className="font-medium text-red-800">Error loading shipments</p>
+              <p className="text-sm text-red-600 mt-1">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -158,7 +150,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                 <Truck className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{MOCK_ENVIOS.filter(e => e.estado === "EN_TRANSITO").length}</p>
+                <p className="text-2xl font-bold">{envios.filter(e => e.estado === "EN_TRANSITO").length}</p>
                 <p className="text-xs text-muted-foreground">En Tránsito</p>
               </div>
             </div>
@@ -168,10 +160,11 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/20">
+                <CheckCircle className="h-5 w-4" />
                 <CheckCircle className="h-5 w-5 text-emerald-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{MOCK_ENVIOS.filter((e: Envio) => e.estado === "ENTREGADO").length}</p>
+                <p className="text-2xl font-bold">{envios.filter((e: Envio) => e.estado === "ENTREGADO").length}</p>
                 <p className="text-xs text-muted-foreground">Entregados</p>
               </div>
             </div>
@@ -184,7 +177,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                 <Package className="h-5 w-5 text-amber-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{MOCK_ENVIOS.filter(e => e.estado === "EN_ADUANA").length}</p>
+                <p className="text-2xl font-bold">{envios.filter(e => e.estado === "EN_ADUANA").length}</p>
                 <p className="text-xs text-muted-foreground">En Aduana</p>
               </div>
             </div>
@@ -197,7 +190,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                 <AlertTriangle className="h-5 w-5 text-red-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{MOCK_ENVIOS.filter(e => e.estado === "RETENIDO").length}</p>
+                <p className="text-2xl font-bold">{envios.filter(e => e.estado === "RETENIDO").length}</p>
                 <p className="text-xs text-muted-foreground">Retenidos</p>
               </div>
             </div>
@@ -321,4 +314,35 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
       </Card>
     </div>
   )
+}
+
+const getStatusConfig = (estado: string) => {
+  const configs: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+    EN_TRANSITO: {
+      color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+      icon: <Truck className="h-3 w-3" />,
+      label: "En Tránsito",
+    },
+    ENTREGADO: {
+      color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      icon: <CheckCircle className="h-3 w-3" />,
+      label: "Entregado",
+    },
+    RETENIDO: {
+      color: "bg-red-500/20 text-red-400 border-red-500/30",
+      icon: <AlertTriangle className="h-3 w-3" />,
+      label: "Retenido",
+    },
+    EN_ADUANA: {
+      color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+      icon: <Package className="h-3 w-3" />,
+      label: "En Aduana",
+    },
+    PROCESANDO: {
+      color: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+      icon: <Filter className="h-3 w-3" />,
+      label: "Procesando",
+    },
+  }
+  return configs[estado] || configs.PROCESANDO
 }

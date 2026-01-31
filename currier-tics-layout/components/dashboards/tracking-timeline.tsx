@@ -88,9 +88,9 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
         title: "Pre-alertado",
         description: "Paquete registrado en el sistema",
         icon: Package,
-        date: new Date().toLocaleDateString("es-ES"),
-        time: "09:30 AM",
-        status: "completed",
+        date: packageData?.prealertedAt ? new Date(packageData.prealertedAt).toLocaleDateString("es-ES") : "Pendiente",
+        time: packageData?.prealertedAt ? new Date(packageData.prealertedAt).toLocaleTimeString("es-ES") : "",
+        status: "pending",
         location: "En línea",
       },
       {
@@ -98,8 +98,8 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
         title: "En Bodega Miami",
         description: "Paquete recibido en instalaciones de Miami",
         icon: Warehouse,
-        date: packageData?.createdAt ? new Date(packageData.createdAt).toLocaleDateString("es-ES") : "Pendiente",
-        time: "02:15 PM",
+        date: packageData?.receivedAt ? new Date(packageData.receivedAt).toLocaleDateString("es-ES") : "Pendiente",
+        time: packageData?.receivedAt ? new Date(packageData.receivedAt).toLocaleTimeString("es-ES") : "",
         status: "pending",
         location: "Miami, FL",
       },
@@ -108,8 +108,8 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
         title: "En Tránsito",
         description: "Salió de Miami - En camino a Ecuador",
         icon: Plane,
-        date: "Pendiente",
-        time: "",
+        date: packageData?.inTransitAt ? new Date(packageData.inTransitAt).toLocaleDateString("es-ES") : "Pendiente",
+        time: packageData?.inTransitAt ? new Date(packageData.inTransitAt).toLocaleTimeString("es-ES") : "",
         status: "pending",
         location: "En vuelo",
       },
@@ -118,8 +118,8 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
         title: "En Aduana",
         description: "Procesando en aduana de Ecuador",
         icon: Shield,
-        date: "Pendiente",
-        time: "",
+        date: packageData?.customsAt ? new Date(packageData.customsAt).toLocaleDateString("es-ES") : "Pendiente",
+        time: packageData?.customsAt ? new Date(packageData.customsAt).toLocaleTimeString("es-ES") : "",
         status: "pending",
         location: "Guayaquil, EC",
       },
@@ -128,8 +128,8 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
         title: "En Centro de Distribución",
         description: "Procesando en centro de distribución local",
         icon: Building2,
-        date: "Pendiente",
-        time: "",
+        date: packageData?.distributionAt ? new Date(packageData.distributionAt).toLocaleDateString("es-ES") : "Pendiente",
+        time: packageData?.distributionAt ? new Date(packageData.distributionAt).toLocaleTimeString("es-ES") : "",
         status: "pending",
         location: "Quito, EC",
       },
@@ -138,8 +138,8 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
         title: "En Ruta",
         description: "Paquete en camino al destinatario",
         icon: Truck,
-        date: "Pendiente",
-        time: "",
+        date: packageData?.onRouteAt ? new Date(packageData.onRouteAt).toLocaleDateString("es-ES") : "Pendiente",
+        time: packageData?.onRouteAt ? new Date(packageData.onRouteAt).toLocaleTimeString("es-ES") : "",
         status: "pending",
         location: "En ruta",
       },
@@ -148,29 +148,29 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
         title: "Entregado",
         description: "Paquete entregado al destinatario",
         icon: CheckCircle2,
-        date: "Pendiente",
-        time: "",
+        date: packageData?.deliveredAt ? new Date(packageData.deliveredAt).toLocaleDateString("es-ES") : "Pendiente",
+        time: packageData?.deliveredAt ? new Date(packageData.deliveredAt).toLocaleTimeString("es-ES") : "",
         status: "pending",
         location: "Destino final",
       },
-    ]
+    ];
 
     if (packageData?.estado) {
-      const currentStepIndex = stateToStepMap[packageData.estado] ?? -1
-      
+      const currentStepIndex = stateToStepMap[packageData.estado] ?? -1;
+
       // Mark steps as completed up to the current state
       steps.forEach((step, index) => {
         if (index < currentStepIndex) {
-          step.status = "completed"
+          step.status = "completed";
         } else if (index === currentStepIndex) {
-          step.status = "current"
+          step.status = "current";
         } else {
-          step.status = "pending"
+          step.status = "pending";
         }
-      })
+      });
     }
 
-    return steps
+    return steps;
   }
 
   if (isLoading) {

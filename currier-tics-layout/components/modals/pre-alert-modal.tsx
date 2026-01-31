@@ -49,6 +49,7 @@ export function PreAlertModal({ open, onOpenChange }: PreAlertModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [tipoEnvio, setTipoEnvio] = useState("NACIONAL"); // Default to NACIONAL
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -64,61 +65,76 @@ export function PreAlertModal({ open, onOpenChange }: PreAlertModalProps) {
   }
 
   const handleSubmit = async () => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!apiUrl) {
-        throw new Error("NEXT_PUBLIC_API_URL no está configurada")
+        throw new Error("NEXT_PUBLIC_API_URL no está configurada");
       }
 
       // Get user from localStorage
-      const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
-      const usuarioId = usuario.id || 1
+      const usuario = JSON.parse(localStorage.getItem("usuario") || "{}");
+      const usuarioId = usuario.id || 1;
+
+      // Generate tracking number if not provided
+      const generatedTrackingNumber = `TRK-${new Date()
+        .toISOString()
+        .replace(/[-:.TZ]/g, "")}`;
+      const finalTrackingNumber = trackingNumber || generatedTrackingNumber;
 
       // POST to backend
       const response = await fetch(`${apiUrl}/api/paquetes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            trackingNumber: trackingNumber,
-            storeName: storeName === "otra" ? customStore : storeName,
-            descripcion: description,
-            precio: price,
-            usuarioId: usuarioId,
-          }),
-      })
+          trackingNumber: finalTrackingNumber,
+          storeName: storeName === "otra" ? customStore : storeName,
+          descripcion: description,
+          precio: price,
+          usuarioId: usuarioId,
+          tipo_envio: tipoEnvio, // Include tipo_envio
+          estado: "PRE_ALERTA", // Default estado
+        }),
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      const data = await response.json()
-      console.log("Pre-alerta guardada:", data)
+      const data = await response.json();
+      console.log("Pre-alerta guardada:", data);
 
       // Show success
-      setIsSubmitting(false)
-      setIsSuccess(true)
+      setIsSubmitting(false);
+      setIsSuccess(true);
 
       // Reset after showing success
       setTimeout(() => {
-        setIsSuccess(false)
-        setTrackingNumber("")
-        setStoreName("")
-        setCustomStore("")
-        setDescription("")
-        setPrice("")
-        setFile(null)
-        onOpenChange(false)
-      }, 2000)
+        setIsSuccess(false);
+        setTrackingNumber("");
+        setStoreName("");
+        setCustomStore("");
+        setDescription("");
+        setPrice("");
+        setFile(null);
+        setTipoEnvio("NACIONAL"); // Reset tipo_envio
+        onOpenChange(false);
+        window.location.reload(); // Refresh the page
+      }, 2000);
     } catch (error) {
-      setIsSubmitting(false)
-      console.error("Error al guardar pre-alerta:", error)
-      alert("Error al guardar la pre-alerta. Intenta de nuevo.")
+      setIsSubmitting(false);
+      console.error("Error al guardar pre-alerta:", error);
+      alert("Error al guardar la pre-alerta. Intenta de nuevo.");
     }
-  }
+  };
 
-  const isFormValid = trackingNumber && (storeName || customStore) && description && price
+  const isFormValid =
+    tipoEnvio && // Ensure tipo_envio is selected
+    (trackingNumber || true) &&
+    (storeName || customStore) &&
+    description &&
+    price;
 
   if (isSuccess) {
     return (
@@ -149,6 +165,22 @@ export function PreAlertModal({ open, onOpenChange }: PreAlertModalProps) {
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Tipo de Envío */}
+          <div className="space-y-2">
+            <Label htmlFor="tipo-envio">
+              Tipo de Envío <span className="text-destructive">*</span>
+            </Label>
+            <Select value={tipoEnvio} onValueChange={setTipoEnvio}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccione tipo de envío" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NACIONAL">Nacional</SelectItem>
+                <SelectItem value="INTERNACIONAL">Internacional</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Tracking Number */}
           <div className="space-y-2">
             <Label htmlFor="prealert-tracking">
