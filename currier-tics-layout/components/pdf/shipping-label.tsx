@@ -125,9 +125,17 @@ export default function ShippingLabel({ envio }: { envio: any }) {
         {/* DESTINATARIO */}
         <View style={styles.section}>
           <Text style={styles.label}>DESTINO (TO):</Text>
-          <Text style={styles.value}>{envio.ciudad || "Ciudad por definir"}</Text>
           <Text style={styles.value}>
-            {envio.direccion || "Dirección Principal"}
+            {envio.destinatarioNombre || "Destinatario Pendiente"}
+          </Text>
+          <Text style={styles.value}>
+            {envio.destinatarioCiudad || "Ciudad Pendiente"}
+          </Text>
+          <Text style={styles.value}>
+            {envio.destinatarioDireccion || "Dirección Pendiente"}
+          </Text>
+          <Text style={styles.value}>
+            Tel: {envio.destinatarioTelefono || "N/A"}
           </Text>
         </View>
 
