@@ -93,44 +93,83 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
       }
 
       console.log("🔍 [Frontend] Cargando detalles del envío ID:", numericId)
-      console.log("📡 [Frontend] Llamando a: /api/envios/" + numericId)
+      console.log("📡 [Frontend] ID recibido - Tipo:", typeof numericId, "Valor:", numericId)
 
-      const { data, error, status } = await defensiveFetch<EnvioDetalles>(
-        `/api/envios/${numericId}`,
+      // ✅ INTENTAR MÚLTIPLES RUTAS (porque el backend puede estar en /api/paquetes o /api/envios)
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+      
+      // Opción 1: Intentar /api/paquetes (que es donde viene la lista)
+      const url1 = `${apiUrl}/api/paquetes/${numericId}`
+      console.log("📡 [Frontend] URL opción 1 (paquetes):", url1)
+
+      const { data: data1, error: error1, status: status1 } = await defensiveFetch<EnvioDetalles>(
+        `/api/paquetes/${numericId}`,
         {
           method: "GET",
           fallbackData: createFallbackEnvio(numericId),
         }
       )
 
-      if (error) {
-        console.error("❌ [Frontend] Error HTTP al cargar:", error)
-        console.error("📊 [Frontend] Status:", status)
-        console.error("🔗 [Frontend] URL llamada: /api/envios/" + numericId)
-        alert(`Error al cargar detalles: ${error}`)
+      // Si funciona la opción 1, usarla
+      if (!error1 && data1) {
+        console.log("✅ [Frontend] ÉXITO - URL /api/paquetes funcionó:", data1)
+        const isFallback = (data1 as any)._fallback
+        const mensaje = isFallback
+          ? "⚠️ Datos no disponibles (usando fallback)"
+          : "✅ Detalles del envío"
+
+        alert(
+          `${mensaje}\n\nTracking: ${data1.trackingId}\nEstado: ${data1.estado}\nDestinatario: ${data1.destinatario}`
+        )
+        setLoadingDetalles(false)
         return
       }
 
-      if (!data) {
-        console.warn("⚠️ [Frontend] No hay datos disponibles para ID:", numericId)
+      console.warn("⚠️ [Frontend] URL /api/paquetes devolvió error:", error1, "Status:", status1)
+
+      // Opción 2: Intentar /api/envios (respaldo)
+      const url2 = `/api/envios/${numericId}`
+      console.log("📡 [Frontend] URL opción 2 (envios):", url2)
+
+      const { data: data2, error: error2, status: status2 } = await defensiveFetch<EnvioDetalles>(
+        url2,
+        {
+          method: "GET",
+          fallbackData: createFallbackEnvio(numericId),
+        }
+      )
+
+      if (error2) {
+        console.error("❌ [Frontend] AMBAS URLs fallaron")
+        console.error("❌ Error en /api/paquetes:", error1, "Status:", status1)
+        console.error("❌ Error en /api/envios:", error2, "Status:", status2)
+        alert(
+          `Error al cargar detalles:\n\nURL 1 (/api/paquetes/${numericId}): ${error1}\nURL 2 (/api/envios/${numericId}): ${error2}`
+        )
+        setLoadingDetalles(false)
+        return
+      }
+
+      if (!data2) {
+        console.warn("⚠️ [Frontend] No hay datos en opción 2 para ID:", numericId)
         alert("No se pudieron cargar los detalles del envío.")
+        setLoadingDetalles(false)
         return
       }
 
-      console.log("✅ [Frontend] Detalles cargados:", data)
+      console.log("✅ [Frontend] ÉXITO - URL /api/envios funcionó:", data2)
 
-      // Aquí iría la lógica para mostrar los detalles (modal, sidebar, etc.)
-      // Por ahora solo log
-      const isFallback = (data as any)._fallback
+      const isFallback = (data2 as any)._fallback
       const mensaje = isFallback
         ? "⚠️ Datos no disponibles (usando fallback)"
         : "✅ Detalles del envío"
 
       alert(
-        `${mensaje}\n\nTracking: ${data.trackingId}\nEstado: ${data.estado}\nDestinatario: ${data.destinatario}`
+        `${mensaje}\n\nTracking: ${data2.trackingId}\nEstado: ${data2.estado}\nDestinatario: ${data2.destinatario}`
       )
     } catch (err: any) {
       console.error("💥 [Frontend ERROR] Error crítico:", err)
+      console.error("💥 [Frontend ERROR] Stack:", err.stack)
       alert("Error de conexión. Por favor, intenta de nuevo.")
     } finally {
       setLoadingDetalles(false)
