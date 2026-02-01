@@ -228,34 +228,41 @@ export function Pagos() {
 
   const handleSubmitPago = async () => {
     try {
-      console.log("Registrando pago:", formData)
+      console.log("📤 Registrando pago:", formData)
       
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       if (!apiUrl || !usuario) {
-        console.error("API URL no configurada o usuario no existe")
+        console.error("❌ API URL no configurada o usuario no existe")
         return
       }
 
-      // Prepare FormData for file upload
+      // Prepare FormData for file upload (multipart/form-data)
       const submitData = new FormData()
       submitData.append("facturaId", formData.facturaId)
       submitData.append("monto", formData.monto)
       submitData.append("metodoPago", formData.metodoPago)
       submitData.append("referencia", formData.referencia)
-      submitData.append("descripcion", formData.notas)
-      submitData.append("usuarioId", usuario.id.toString())
+      submitData.append("descripcion", formData.notas || "")
       if (formData.comprobante) {
         submitData.append("comprobante", formData.comprobante)
       }
 
-      // Submit payment to API
+      console.log("📦 FormData preparado:")
+      for (let [key, value] of submitData.entries()) {
+        console.log(`  ${key}:`, value)
+      }
+
+      // Submit payment to API - NO set Content-Type header (browser sets it automatically with boundary)
       const response = await fetch(`${apiUrl}/api/pagos`, {
         method: "POST",
         body: submitData,
       })
 
+      console.log("📊 Response status:", response.status, response.statusText)
+
       if (response.ok) {
-        console.log("✅ Pago registrado exitosamente")
+        const result = await response.json()
+        console.log("✅ Pago registrado exitosamente:", result)
         setSubmitSuccess(true)
         
         // Reset form
@@ -298,10 +305,14 @@ export function Pagos() {
           router.refresh()
         }, 1500)
       } else {
-        console.error("❌ Error al registrar pago:", response.status)
+        const errorText = await response.text()
+        console.error("❌ Error al registrar pago:", response.status, response.statusText)
+        console.error("❌ Error body:", errorText)
+        alert(`Error ${response.status}: ${errorText || 'No se pudo registrar el pago'}`)
       }
     } catch (err) {
       console.error("❌ Error submitting pago:", err)
+      alert("Error de red al enviar el pago. Verifica tu conexión.")
     }
   }
 
