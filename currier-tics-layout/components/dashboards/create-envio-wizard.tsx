@@ -6,10 +6,12 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
-  DollarSign,
   Home,
   Package,
   User,
+  Loader2,
+  AlertCircle,
+  Settings,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,7 +58,7 @@ interface CreateEnvioWizardProps {
   onSuccess?: () => void
 }
 
-const pasos = ["Remitente", "Destinatario", "Paquete", "Confirmación"] as const
+const pasos = ["Remitente", "Destinatario", "Paquete"] as const
 
 export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps) {
   const { toast } = useToast()
@@ -200,10 +202,8 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
         throw new Error(text || "No se pudo crear el envío")
       }
 
-      const envioCreado = await response.json().catch(() => null)
-
       toast({
-        title: "✅ Envío creado",
+        title: "✅ Solicitud creada",
         description: `Guía generada correctamente.`,
       })
 
@@ -222,8 +222,8 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto">
-      {/* Progress Bar */}
-      <div className="grid grid-cols-4 gap-2">
+      {/* Progress Bar - 3 pasos */}
+      <div className="grid grid-cols-3 gap-2">
         {pasos.map((paso, index) => (
           <div
             key={paso}
@@ -245,14 +245,45 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
       {/* PASO 1: REMITENTE */}
       {pasoActual === 0 && (
         <div className="space-y-3">
-          <h3 className="font-semibold">¿Desde dónde envías?</h3>
+          <h3 className="font-semibold flex items-center gap-2">
+            <Home className="h-5 w-5 text-blue-600" />
+            ¿Dónde recogemos el paquete?
+          </h3>
 
           {isLoadingDirecciones ? (
-            <div className="text-sm text-muted-foreground">Cargando direcciones...</div>
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cargando direcciones...
+            </div>
+          ) : direcciones.length === 0 ? (
+            // Sin direcciones guardadas
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex gap-2 text-sm text-amber-900">
+                  <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">No tienes direcciones guardadas</p>
+                    <p className="text-xs">Crea una en Configuración para entregas rápidas</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 text-amber-900 border-amber-300 hover:bg-amber-100"
+                  onClick={() => {
+                    window.open("/dashboard/configuracion", "_blank")
+                  }}
+                >
+                  <Settings className="h-4 w-4" />
+                  Ir a Configuración
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-2">
               <Label htmlFor="direccionOrigen" className="text-sm">
-                Seleccionar dirección
+                Seleccionar dirección de recogida
               </Label>
               <Controller
                 name="direccionOrigenId"
@@ -271,7 +302,12 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
                     <SelectContent>
                       {direcciones.map((dir) => (
                         <SelectItem key={dir.id} value={dir.id} className="text-sm">
-                          {dir.alias} - {dir.ciudad}
+                          <div className="flex items-center gap-2">
+                            {dir.esPrincipal && (
+                              <span className="text-xs font-semibold text-green-600">★</span>
+                            )}
+                            {dir.alias} - {dir.ciudad}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -284,14 +320,22 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
             </div>
           )}
 
+          {/* Preview de dirección seleccionada */}
           {direccionSeleccionada && (
             <Card className="border-dashed bg-muted/50">
               <CardContent className="space-y-1 pt-3 text-sm">
-                <p className="font-medium">{direccionSeleccionada.alias}</p>
-                <p className="text-xs text-muted-foreground">
-                  {direccionSeleccionada.callePrincipal}
-                </p>
-                <p className="text-xs text-muted-foreground">{direccionSeleccionada.ciudad}</p>
+                <div className="flex items-start gap-2">
+                  <Home className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">{direccionSeleccionada.alias}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {direccionSeleccionada.callePrincipal}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {direccionSeleccionada.ciudad}
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -301,11 +345,18 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
       {/* PASO 2: DESTINATARIO */}
       {pasoActual === 1 && (
         <div className="space-y-3">
-          <h3 className="font-semibold">¿A quién va el envío?</h3>
+          <h3 className="font-semibold flex items-center gap-2">
+            <User className="h-5 w-5 text-blue-600" />
+            Datos del Destinatario
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            ℹ️ Estos datos solo se usan para esta solicitud, no se guardan en tu perfil
+          </p>
+
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label htmlFor="cedula" className="text-xs">
-                Cédula
+                Cédula o Pasaporte *
               </Label>
               <Controller
                 name="cedulaDestinatario"
@@ -319,7 +370,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
                     id="cedula"
                     placeholder="1234567890"
                     {...field}
-                    className={`text-sm h-8 ${
+                    className={`text-sm h-9 ${
                       errors.cedulaDestinatario ? "border-destructive" : ""
                     }`}
                   />
@@ -332,7 +383,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
             <div className="space-y-1">
               <Label htmlFor="nombre" className="text-xs">
-                Nombre
+                Nombre Completo *
               </Label>
               <Controller
                 name="nombreDestinatario"
@@ -341,9 +392,9 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
                 render={({ field }) => (
                   <Input
                     id="nombre"
-                    placeholder="Juan"
+                    placeholder="Juan Pérez"
                     {...field}
-                    className={`text-sm h-8 ${
+                    className={`text-sm h-9 ${
                       errors.nombreDestinatario ? "border-destructive" : ""
                     }`}
                   />
@@ -356,7 +407,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
             <div className="space-y-1">
               <Label htmlFor="telefonoDestino" className="text-xs">
-                Teléfono
+                Teléfono *
               </Label>
               <Controller
                 name="telefonoDestinatario"
@@ -365,9 +416,9 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
                 render={({ field }) => (
                   <Input
                     id="telefonoDestino"
-                    placeholder="+593..."
+                    placeholder="+593 98 123 4567"
                     {...field}
-                    className={`text-sm h-8 ${
+                    className={`text-sm h-9 ${
                       errors.telefonoDestinatario ? "border-destructive" : ""
                     }`}
                   />
@@ -380,7 +431,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
             <div className="space-y-1">
               <Label htmlFor="ciudadDestino" className="text-xs">
-                Ciudad
+                Ciudad Destino *
               </Label>
               <Controller
                 name="ciudadDestino"
@@ -391,7 +442,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
                     id="ciudadDestino"
                     placeholder="Guayaquil"
                     {...field}
-                    className={`text-sm h-8 ${errors.ciudadDestino ? "border-destructive" : ""}`}
+                    className={`text-sm h-9 ${errors.ciudadDestino ? "border-destructive" : ""}`}
                   />
                 )}
               />
@@ -402,7 +453,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
             <div className="col-span-2 space-y-1">
               <Label htmlFor="direccionDestino" className="text-xs">
-                Dirección
+                Dirección Exacta de Entrega *
               </Label>
               <Controller
                 name="direccionDestino"
@@ -411,9 +462,9 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
                 render={({ field }) => (
                   <Input
                     id="direccionDestino"
-                    placeholder="Av. Principal 123"
+                    placeholder="Av. Principal 123, entre Calle 1 y Calle 2"
                     {...field}
-                    className={`text-sm h-8 ${
+                    className={`text-sm h-9 ${
                       errors.direccionDestino ? "border-destructive" : ""
                     }`}
                   />
@@ -427,14 +478,17 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
         </div>
       )}
 
-      {/* PASO 3: PAQUETE */}
+      {/* PASO 3: DETALLES DEL PAQUETE */}
       {pasoActual === 2 && (
         <div className="space-y-3">
-          <h3 className="font-semibold">Detalles del Paquete</h3>
+          <h3 className="font-semibold flex items-center gap-2">
+            <Package className="h-5 w-5 text-blue-600" />
+            Detalles del Paquete
+          </h3>
 
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label htmlFor="descripcion" className="text-xs">
-              Descripción
+              Descripción del Contenido *
             </Label>
             <Controller
               name="descripcion"
@@ -443,8 +497,8 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
               render={({ field }) => (
                 <textarea
                   id="descripcion"
-                  placeholder="Ej: Ropa, zapatos..."
-                  className={`w-full rounded-md border px-2 py-1 text-sm resize-none h-16 ${
+                  placeholder="Ej: Ropa, zapatos, accesorios..."
+                  className={`w-full rounded-md border px-3 py-2 text-sm resize-none h-20 ${
                     errors.descripcion ? "border-destructive" : "border-input"
                   }`}
                   {...field}
@@ -459,7 +513,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label htmlFor="peso" className="text-xs">
-                Peso (lb)
+                Peso (Libras) *
               </Label>
               <Controller
                 name="peso"
@@ -475,7 +529,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
                     step="0.1"
                     placeholder="2.5"
                     {...field}
-                    className={`text-sm h-8 ${errors.peso ? "border-destructive" : ""}`}
+                    className={`text-sm h-9 ${errors.peso ? "border-destructive" : ""}`}
                   />
                 )}
               />
@@ -486,12 +540,15 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
             <div className="space-y-1">
               <Label htmlFor="valor" className="text-xs">
-                Valor (USD)
+                Valor Declarado (USD) *
               </Label>
               <Controller
                 name="valorDeclarado"
                 control={control}
-                rules={{ required: "Requerido", pattern: { value: /^\d+(\.\d{1,2})?$/, message: "Inválido" } }}
+                rules={{
+                  required: "Requerido",
+                  pattern: { value: /^\d+(\.\d{1,2})?$/, message: "Inválido" },
+                }}
                 render={({ field }) => (
                   <Input
                     id="valor"
@@ -499,7 +556,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
                     step="0.01"
                     placeholder="50.00"
                     {...field}
-                    className={`text-sm h-8 ${errors.valorDeclarado ? "border-destructive" : ""}`}
+                    className={`text-sm h-9 ${errors.valorDeclarado ? "border-destructive" : ""}`}
                   />
                 )}
               />
@@ -509,50 +566,23 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
             </div>
           </div>
 
-          <Card className="border-dashed bg-blue-50">
-            <CardContent className="flex items-center justify-between pt-2 pb-2 px-3">
-              <p className="text-xs text-muted-foreground">Costo Estimado</p>
+          {/* Costo estimado */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="flex items-center justify-between pt-3 pb-3 px-3">
+              <p className="text-xs font-medium text-blue-900">Costo Estimado</p>
               <p className="text-lg font-bold text-blue-600">${costoEstimado}</p>
             </CardContent>
           </Card>
-        </div>
-      )}
 
-      {/* PASO 4: CONFIRMACIÓN */}
-      {pasoActual === 3 && (
-        <div className="space-y-3">
-          <h3 className="font-semibold">Resumen del Envío</h3>
-
-          <div className="space-y-2 text-sm">
-            <Card className="border-dashed">
-              <CardContent className="space-y-1 pt-3">
-                <p className="text-xs text-muted-foreground">Remitente</p>
-                <p className="font-medium text-sm">{direccionSeleccionada?.alias}</p>
-                <p className="text-xs text-muted-foreground">{direccionSeleccionada?.ciudad}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-dashed">
-              <CardContent className="space-y-1 pt-3">
-                <p className="text-xs text-muted-foreground">Destinatario</p>
-                <p className="font-medium text-sm">{formValues.nombreDestinatario}</p>
-                <p className="text-xs text-muted-foreground">{formValues.ciudadDestino}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-primary bg-primary/5">
-              <CardContent className="flex items-center justify-between pt-3">
-                <p className="text-xs text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold text-primary">${costoEstimado}</p>
-              </CardContent>
-            </Card>
-          </div>
+          <p className="text-xs text-muted-foreground italic">
+            💡 El costo incluye: tarifa base + peso + seguro (1% del valor declarado)
+          </p>
         </div>
       )}
 
       <Separator />
 
-      {/* Botones */}
+      {/* Botones de navegación */}
       <div className="flex items-center justify-between">
         <Button
           type="button"
@@ -571,9 +601,18 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
             <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         ) : (
-          <Button type="submit" size="sm" disabled={isSaving} className="gap-1">
-            {isSaving ? "Generando..." : "Generar Envío"}
-            <CheckCircle2 className="h-4 w-4" />
+          <Button type="submit" size="sm" disabled={isSaving} className="gap-1 bg-blue-600 hover:bg-blue-700">
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creando...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4" />
+                Crear Solicitud
+              </>
+            )}
           </Button>
         )}
       </div>

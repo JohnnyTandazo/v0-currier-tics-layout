@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AddressManager } from "@/components/settings/address-manager"
+import { MisDirectiones } from "@/components/settings/mis-direcciones"
 import { useToast } from "@/hooks/use-toast"
 
 export default function ConfiguracionPage() {
@@ -261,7 +261,7 @@ export default function ConfiguracionPage() {
         <TabsContent value="direcciones">
           <Card>
             <CardContent className="pt-6">
-              <AddressManager />
+              <MisDirectiones />
             </CardContent>
           </Card>
         </TabsContent>
