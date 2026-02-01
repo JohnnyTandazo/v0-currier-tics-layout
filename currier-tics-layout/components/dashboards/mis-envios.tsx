@@ -181,16 +181,29 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         if (data.length > 0) {
           console.log("🔥 Estructura completa objeto 0:", data[0])
           console.log("🔥 Campos disponibles en objeto 0:", Object.keys(data[0]))
-          console.log("🔥 Todos los IDs posibles:")
+          console.log("🔥 ========================================")
+          console.log("🔥 TRACKING IDs DISPONIBLES:")
+          console.log("    p.trackingId:", data[0].trackingId)
+          console.log("    p.tracking:", data[0].tracking)
+          console.log("    p.numeroGuia:", data[0].numeroGuia)
+          console.log("    p.numero_guia:", data[0].numero_guia)
+          console.log("    p.trackingNumber:", data[0].trackingNumber)
+          console.log("    p.numeroTracking:", data[0].numeroTracking)
+          console.log("    p.numero_tracking:", data[0].numero_tracking)
+          console.log("🔥 ========================================")
+          console.log("🔥 IDs NUMÉRICOS DISPONIBLES:")
           console.log("    p.id:", data[0].id)
           console.log("    p.idEnvio:", data[0].idEnvio)
           console.log("    p.id_envio:", data[0].id_envio)
           console.log("    p.paqueteId:", data[0].paqueteId)
           console.log("    p.id_paquete:", data[0].id_paquete)
-          console.log("    p.numeroGuia:", data[0].numeroGuia)
-          console.log("    p.numero_guia:", data[0].numero_guia)
-          console.log("    p.referencia:", data[0].referencia)
-          console.log("    p.reference:", data[0].reference)
+          console.log("🔥 ========================================")
+          
+          // Mostrar los primeros 3 registros para ver patrones
+          console.log("🔥 PRIMEROS 3 REGISTROS COMPLETOS:")
+          data.slice(0, 3).forEach((item: any, idx: number) => {
+            console.log(`  [${idx}] trackingId: "${item.trackingId || item.numeroGuia || item.numeroTracking || 'N/A'}" | id: ${item.id}`)
+          })
         }
         
         console.log("USUARIO LOGUEADO:", usuarioStored)
@@ -201,16 +214,23 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           // CRÍTICO: Validar que siempre haya un ID válido
           const finalId = p.id || p.idEnvio || p.id_envio || p.paqueteId || p.id_paquete || p.numeroGuia || p.numero_guia || p.referencia || p.reference
           
+          // CRÍTICO: Obtener el trackingId REAL del backend
+          const realTrackingId = p.trackingId || p.tracking || p.numeroGuia || p.numero_guia || p.trackingNumber || p.numeroTracking || p.numero_tracking
+          
           if (!finalId) {
             console.error("⚠️ [MAPEO] Objeto en índice", index, "NO TIENE ningún campo de ID:")
             console.error("    Objeto completo:", p)
             console.error("    Campos:", Object.keys(p))
           }
           
+          if (!realTrackingId) {
+            console.warn("⚠️ [MAPEO] Objeto en índice", index, "NO TIENE trackingId. Generando fallback PKG-" + index)
+          }
+          
           const envioNormalizado = {
             // CRÍTICO: Usar el ID real del backend, NUNCA el índice
             id: finalId || undefined, // Si no hay ID, lo dejamos undefined para detectarlo fácilmente
-            trackingId: p.trackingId || p.tracking || p.numeroGuia || p.numero_guia || p.trackingNumber || `PKG-${index}`,
+            trackingId: realTrackingId || `PKG-${index}`,
             fecha: p.fecha || p.fechaCreacion || p.createdAt || new Date().toISOString(),
             destinatario: p.destinatario || p.recipient || p.nombre_destinatario || "SIN-DESTINATARIO",
             direccion: p.direccion || p.address || p.direccion_envio || "SIN-DIRECCIÓN",
@@ -220,7 +240,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
             usuarioId: p.usuarioId || p.usuario?.id || p.id_usuario || p.usuario_id || usuarioStored.id,
           }
 
-          console.log(`✅ [MAPEO] Índice ${index} - ID asignado:`, envioNormalizado.id, "- Objeto mapeado:", envioNormalizado)
+          console.log(`✅ [MAPEO ${index}] ID: ${envioNormalizado.id} | trackingId: "${envioNormalizado.trackingId}"`)
           return envioNormalizado
         })
 
