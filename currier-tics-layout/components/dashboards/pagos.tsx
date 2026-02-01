@@ -128,10 +128,30 @@ export function Pagos() {
 
         // Fetch facturas pendientes
         try {
-          const resFacturas = await fetch(`${apiUrl}/api/facturas/usuario/${usuario.id}`)
+          console.log("🔄 Fetching facturas para usuario.id:", usuario.id)
+          const urlFacturas = `${apiUrl}/api/facturas/usuario/${usuario.id}`
+          console.log("📍 URL completa:", urlFacturas)
+          
+          const resFacturas = await fetch(urlFacturas)
+          console.log("📊 Status response:", resFacturas.status, resFacturas.statusText)
+          
           if (resFacturas.ok) {
             const data = await resFacturas.json()
+            console.log("📦 Raw data from Backend:", data)
+            console.log("📦 Raw data type:", typeof data, "isArray:", Array.isArray(data))
+            
             if (Array.isArray(data)) {
+              console.log("✅ Es array, elementos:", data.length)
+              data.forEach((f, idx) => {
+                console.log(`  [${idx}]`, {
+                  id: f.id,
+                  numeroFactura: f.numeroFactura,
+                  monto: f.monto,
+                  estado: f.estado,
+                  usuarioId: f.usuarioId
+                })
+              })
+              
               // Filtrar solo las facturas pendientes (si el endpoint no lo hace)
               const facturasPendientes = data.filter(
                 (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
@@ -143,7 +163,9 @@ export function Pagos() {
               setFacturasPendientes([])
             }
           } else {
+            const errorText = await resFacturas.text()
             console.warn("⚠️ Error cargando facturas:", resFacturas.status, resFacturas.statusText)
+            console.warn("⚠️ Error body:", errorText)
             setFacturasPendientes([])
           }
         } catch (err) {
