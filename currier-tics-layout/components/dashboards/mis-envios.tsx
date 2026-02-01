@@ -115,6 +115,52 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
     }
   }
 
+  // ✅ FUNCIÓN DEFENSIVA PARA CARGAR DETALLES
+  const handleVerDetalles = async (envioId: number) => {
+    try {
+      setLoadingDetalles(true)
+      console.log("🔍 [Frontend] Cargando detalles del envío ID:", envioId)
+
+      const { data, error, status } = await defensiveFetch<EnvioDetalles>(
+        `/api/envios/${envioId}`,
+        {
+          method: "GET",
+          fallbackData: createFallbackEnvio(envioId),
+        }
+      )
+
+      if (error) {
+        console.error("❌ [Frontend] Error al cargar:", error)
+        alert(`Error: ${error}`)
+        return
+      }
+
+      if (!data) {
+        console.warn("⚠️ [Frontend] No hay datos disponibles")
+        alert("No se pudieron cargar los detalles del envío.")
+        return
+      }
+
+      console.log("✅ [Frontend] Detalles cargados:", data)
+
+      // Aquí iría la lógica para mostrar los detalles (modal, sidebar, etc.)
+      // Por ahora solo log
+      const isFallback = (data as any)._fallback
+      const mensaje = isFallback
+        ? "⚠️ Datos no disponibles (usando fallback)"
+        : "✅ Detalles del envío"
+
+      alert(
+        `${mensaje}\n\nTracking: ${data.trackingId}\nEstado: ${data.estado}\nDestinatario: ${data.destinatario}`
+      )
+    } catch (err: any) {
+      console.error("💥 [Frontend ERROR] Error crítico:", err)
+      alert("Error de conexión. Por favor, intenta de nuevo.")
+    } finally {
+      setLoadingDetalles(false)
+    }
+  }
+
   useEffect(() => {
     const fetchEnvios = async () => {
       setIsLoading(true)
