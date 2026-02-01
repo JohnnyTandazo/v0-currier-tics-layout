@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { useToast } from "@/hooks/use-toast"
 
 interface EnvioTimelineProps {
   envioId: string
@@ -28,10 +29,22 @@ const stateToStepMap: Record<string, number> = {
   ENTREGADO: 4,
 }
 
+const estadosDisponibles = [
+  "PROCESANDO",
+  "EN_ADUANA",
+  "EN_TRANSITO",
+  "RETENIDO",
+  "ENTREGADO",
+] as const
+
 export function EnvioTimeline({ envioId, onBack }: EnvioTimelineProps) {
   const [envio, setEnvio] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string>("CLIENTE")
+  const [currentEstado, setCurrentEstado] = useState<string>("PROCESANDO")
+  const [isUpdatingEstado, setIsUpdatingEstado] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     const fetchEnvio = async () => {
@@ -66,6 +79,77 @@ export function EnvioTimeline({ envioId, onBack }: EnvioTimelineProps) {
 
     fetchEnvio()
   }, [envioId])
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    const savedUser = localStorage.getItem("usuario")
+    if (!savedUser) {
+      return
+    }
+
+    try {
+      const parsedUser = JSON.parse(savedUser)
+      const rol = parsedUser?.rol || parsedUser?.role || "CLIENTE"
+      setUserRole(String(rol).toUpperCase())
+    } catch {
+      setUserRole("CLIENTE")
+    }
+  }, [])
+
+  useEffect(() => {
+    if (envio?.estado) {
+      setCurrentEstado(envio.estado)
+    }
+  }, [envio])
+
+  const canEditEstado = userRole === "ADMIN" || userRole === "OPERADOR"
+
+  const handleEstadoChange = async (nuevoEstado: string) => {
+    if (!envioId || isUpdatingEstado || nuevoEstado === currentEstado) {
+      return
+    }
+
+    setIsUpdatingEstado(true)
+    try {
+      const url = `/api/envios/${encodeURIComponent(envioId)}/estado?nuevoEstado=${encodeURIComponent(nuevoEstado)}`
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => "")
+        throw new Error(text || `Error ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json().catch(() => null)
+      setEnvio((prev: any) => ({
+        ...(prev || {}),
+        ...(data || {}),
+        estado: nuevoEstado,
+      }))
+      setCurrentEstado(nuevoEstado)
+      toast({
+        title: "Estado actualizado",
+        description: `Nuevo estado: ${nuevoEstado}`,
+      })
+    } catch (err) {
+      console.error("❌ Error al actualizar estado:", err)
+      setCurrentEstado(envio?.estado || "PROCESANDO")
+      toast({
+        title: "No se pudo actualizar",
+        description: "Intenta nuevamente en unos segundos.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdatingEstado(false)
+    }
+  }
 
   const timelineSteps = useMemo(() => {
     const steps = [
@@ -158,13 +242,32 @@ export function EnvioTimeline({ envioId, onBack }: EnvioTimelineProps) {
             <p className="text-muted-foreground font-mono">ID: {envioId}</p>
           </div>
         </div>
-        <Badge
-          variant="secondary"
-          className="bg-accent text-accent-foreground w-fit text-sm px-4 py-1.5"
-        >
-          <Clock className="mr-2 h-4 w-4" />
-          Estado: {envio?.estado || "Desconocido"}
-        </Badge>
+        {canEditEstado ? (
+          <div className="flex items-center gap-2 rounded-md border border-border bg-accent/40 px-3 py-1.5 text-sm">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Estado:</span>
+            <select
+              className="bg-transparent text-sm font-medium outline-none"
+              value={currentEstado}
+              onChange={(event) => handleEstadoChange(event.target.value)}
+              disabled={isUpdatingEstado}
+            >
+              {estadosDisponibles.map((estado) => (
+                <option key={estado} value={estado}>
+                  {estado}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <Badge
+            variant="secondary"
+            className="bg-accent text-accent-foreground w-fit text-sm px-4 py-1.5"
+          >
+            <Clock className="mr-2 h-4 w-4" />
+            Estado: {envio?.estado || "Desconocido"}
+          </Badge>
+        )}
       </div>
 
       <Card>
