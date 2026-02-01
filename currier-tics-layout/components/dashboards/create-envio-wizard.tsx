@@ -60,6 +60,38 @@ interface CreateEnvioWizardProps {
 
 const pasos = ["Remitente", "Destinatario", "Paquete"] as const
 
+// Función auxiliar a prueba de balas para extraer el ID seguro
+const getSafeUserId = (): number | null => {
+  if (typeof window === "undefined") return null // Evitar error de servidor
+
+  try {
+    // INTENTO 1: Buscar en el objeto 'usuario' (donde confirmamos que está el dato)
+    const usuarioStr = localStorage.getItem("usuario")
+    if (usuarioStr) {
+      const usuarioObj = JSON.parse(usuarioStr)
+      if (usuarioObj && usuarioObj.id) {
+        const cleanId = Number(usuarioObj.id)
+        console.log("✅ ID extraído de localStorage['usuario']:", cleanId)
+        return cleanId
+      }
+    }
+
+    // INTENTO 2: Buscar en 'userId' por si acaso
+    const simpleId = localStorage.getItem("userId")
+    if (simpleId) {
+      const cleanId = Number(simpleId)
+      console.log("✅ ID extraído de localStorage['userId']:", cleanId)
+      return cleanId
+    }
+
+    console.warn("⚠️ No se encontró ID en localStorage")
+    return null
+  } catch (error) {
+    console.error("🔥 Error extrayendo ID:", error)
+    return null
+  }
+}
+
 export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps) {
   const { toast } = useToast()
 
@@ -108,9 +140,26 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
   useEffect(() => {
     const cargarDirecciones = async () => {
+      const safeId = getSafeUserId()
+      
+      if (!safeId) {
+        console.error("🚨 No se encontró ID de usuario, abortando cargarDirecciones")
+        toast({
+          title: "Error",
+          description: "Error: Usuario no identificado",
+          variant: "destructive",
+        })
+        setIsLoadingDirecciones(false)
+        return
+      }
+
+      console.log("🧭 Wizard cargando direcciones para ID:", safeId)
       setIsLoadingDirecciones(true)
       try {
-        const response = await fetch("/api/direcciones", {
+        const url = `/api/direcciones?usuarioId=${safeId}`
+        console.log("📥 GET:", url)
+        
+        const response = await fetch(url, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         })
@@ -121,6 +170,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
         const data = await response.json()
         if (Array.isArray(data)) {
+          console.log("✅ Direcciones cargadas en Wizard:", data.length)
           setDirecciones(data)
           // Auto-seleccionar la primera dirección principal o la primera disponible
           const principal = data.find((d) => d.esPrincipal)
@@ -129,7 +179,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
           }
         }
       } catch (error) {
-        console.error("Error al cargar direcciones:", error)
+        console.error("🔥 Error al cargar direcciones:", error)
         toast({
           title: "Error",
           description: "No se pudieron cargar tus direcciones guardadas",
@@ -141,7 +191,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
     }
 
     cargarDirecciones()
-  }, [])
+  }, [toast, formValues, reset])
 
   const validarPaso = useCallback(async (): Promise<boolean> => {
     if (pasoActual === 0) {
@@ -176,9 +226,23 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
   }
 
   const onSubmit = async (data: FormEnvio) => {
+    const cleanUserId = getSafeUserId()
+
+    if (!cleanUserId) {
+      toast({
+        title: "Error",
+        description: "Error: Usuario no identificado",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSaving(true)
     try {
       const payload = {
+        usuarioId: cleanUserId,
+        tipo: "ENVIO",
+        estado: "RECOLECCION_PENDIENTE",
         direccionOrigenId: data.direccionOrigenId,
         cedulaDestinatario: data.cedulaDestinatario,
         nombreDestinatario: data.nombreDestinatario,
@@ -188,8 +252,9 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
         descripcion: data.descripcion,
         pesoLibras: Number(data.peso),
         valorDeclarado: Number(data.valorDeclarado),
-        tipo: "ENVIO",
       }
+
+      console.log("📤 Payload LIMPIO enviado a POST /api/envios:", payload)
 
       const response = await fetch("/api/envios", {
         method: "POST",
@@ -199,8 +264,12 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
       if (!response.ok) {
         const text = await response.text().catch(() => "")
+        console.error("🔥 Error POST /api/envios:", response.status, text)
         throw new Error(text || "No se pudo crear el envío")
       }
+
+      const responseData = await response.json()
+      console.log("✅ Envío creado:", responseData)
 
       toast({
         title: "✅ Solicitud creada",
@@ -210,6 +279,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
       onSuccess?.()
       onClose?.()
     } catch (error) {
+      console.error("🚨 Error al crear envío:", error)
       toast({
         title: "Error al crear envío",
         description: error instanceof Error ? error.message : "Intenta nuevamente",
