@@ -72,6 +72,8 @@ export function MisDirectiones() {
   const [isSaving, setIsSaving] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   const [form, setForm] = useState<FormDireccion>({
     alias: "",
@@ -85,11 +87,33 @@ export function MisDirectiones() {
 
   const [selectedIcon, setSelectedIcon] = useState<string>("home")
 
+  // Obtener ID del usuario logueado
+  useEffect(() => {
+    try {
+      const usuarioStored = JSON.parse(localStorage.getItem("usuario") || "null")
+      if (usuarioStored && usuarioStored.id) {
+        setUserId(String(usuarioStored.id))
+        setIsAuthenticated(true)
+      } else {
+        setIsAuthenticated(false)
+      }
+    } catch (error) {
+      console.error("Error al obtener usuario:", error)
+      setIsAuthenticated(false)
+    }
+  }, [])
+
   // Cargar direcciones
   const cargarDirecciones = useCallback(async () => {
+    if (!userId || !isAuthenticated) {
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     try {
-      const response = await fetch("/api/direcciones", {
+      const url = `/api/direcciones?usuarioId=${encodeURIComponent(userId)}`
+      const response = await fetch(url, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       })
@@ -112,11 +136,13 @@ export function MisDirectiones() {
     } finally {
       setIsLoading(false)
     }
-  }, [toast])
+  }, [userId, isAuthenticated, toast])
 
   useEffect(() => {
-    cargarDirecciones()
-  }, [cargarDirecciones])
+    if (userId && isAuthenticated) {
+      cargarDirecciones()
+    }
+  }, [userId, isAuthenticated, cargarDirecciones])
 
   // Abrir dialog para agregar nueva dirección
   const handleAgregar = () => {
@@ -159,6 +185,16 @@ export function MisDirectiones() {
 
   // Guardar dirección (crear o actualizar)
   const handleGuardar = async () => {
+    // Validar autenticación
+    if (!userId || !isAuthenticated) {
+      toast({
+        title: "Error",
+        description: "Debes estar autenticado para guardar direcciones",
+        variant: "destructive",
+      })
+      return
+    }
+
     // Validar
     if (!form.alias.trim()) {
       toast({
@@ -199,6 +235,7 @@ export function MisDirectiones() {
     setIsSaving(true)
     try {
       const payload = {
+        usuarioId: userId,
         alias: form.alias,
         callePrincipal: form.callePrincipal,
         calleSecundaria: form.calleSecundaria || null,
@@ -253,6 +290,15 @@ export function MisDirectiones() {
   // Eliminar dirección
   const handleEliminar = async (id: string) => {
     if (!confirm("¿Estás seguro de que deseas eliminar esta dirección?")) {
+      return
+    }
+
+    if (!userId || !isAuthenticated) {
+      toast({
+        title: "Error",
+        description: "Debes estar autenticado para eliminar direcciones",
+        variant: "destructive",
+      })
       return
     }
 
@@ -321,8 +367,28 @@ export function MisDirectiones() {
         </div>
       )}
 
+      {/* Not Authenticated */}
+      {!isAuthenticated && !isLoading && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-12 w-12 text-amber-600 mb-3" />
+            <p className="font-medium text-amber-900">No estás autenticado</p>
+            <p className="text-sm text-amber-800 mb-4">
+              Inicia sesión para administrar tus direcciones
+            </p>
+            <Button
+              onClick={() => (window.location.href = "/login")}
+              size="sm"
+              className="gap-2 bg-amber-600 hover:bg-amber-700"
+            >
+              Ir a Login
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Empty State */}
-      {!isLoading && direcciones.length === 0 && (
+      {!isLoading && isAuthenticated && direcciones.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <MapPinIcon className="h-12 w-12 text-muted-foreground/50 mb-3" />
@@ -343,7 +409,7 @@ export function MisDirectiones() {
       )}
 
       {/* Lista de Direcciones */}
-      {!isLoading && direcciones.length > 0 && (
+      {!isLoading && isAuthenticated && direcciones.length > 0 && (
         <div className="grid gap-3">
           {direcciones.map((dir) => (
             <Card key={dir.id} className="border-border/50 hover:border-border transition-colors">
