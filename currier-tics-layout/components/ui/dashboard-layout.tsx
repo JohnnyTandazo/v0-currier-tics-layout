@@ -8,7 +8,7 @@ import { TrackingTimeline } from "@/components/dashboards/tracking-timeline"
 import { EnvioTimeline } from "@/components/dashboards/envio-timeline"
 import { MisPaquetes } from "@/components/dashboards/mis-paquetes"
 import { MisEnvios } from "@/components/dashboards/mis-envios"
-import { Facturas } from "@/components/dashboards/facturas"
+import MisDocumentos from "@/components/dashboards/mis-documentos"
 import { Pagos } from "@/components/dashboards/pagos"
 import { Notificaciones } from "@/components/dashboards/notificaciones"
 import { Configuracion } from "@/components/dashboards/configuracion"
@@ -106,7 +106,7 @@ export default function DashboardLayout({
             <MisEnvios onViewDetails={onViewEnvioDetails} />
           )}
           {currentRole === "client" && currentClientView === "facturas" && (
-            <Facturas />
+            <MisDocumentos />
           )}
           {currentRole === "client" && currentClientView === "paquetes" && (
             <MisPaquetes onViewTracking={onViewTracking} />
