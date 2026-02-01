@@ -128,19 +128,22 @@ export function Pagos() {
 
         // Fetch facturas pendientes
         try {
-          const resFacturas = await fetch(`${apiUrl}/api/facturas?usuarioId=${usuario.id}`)
+          const resFacturas = await fetch(`${apiUrl}/api/facturas/usuario/${usuario.id}`)
           if (resFacturas.ok) {
             const data = await resFacturas.json()
             if (Array.isArray(data)) {
-              // FILTRO DE USUARIO OBLIGATORIO
-              const misFacturas = data.filter(
-                (f: FacturaPendiente) => String(f.usuarioId || f.usuario?.id) === String(usuario.id)
+              // Filtrar solo las facturas pendientes (si el endpoint no lo hace)
+              const facturasPendientes = data.filter(
+                (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
               )
-              console.log("✅ Facturas pendientes cargadas:", misFacturas.length)
-              setFacturasPendientes(misFacturas)
+              console.log("✅ Facturas pendientes cargadas:", facturasPendientes.length, "de", data.length)
+              setFacturasPendientes(facturasPendientes)
+            } else {
+              console.warn("⚠️ Respuesta de facturas no es array:", data)
+              setFacturasPendientes([])
             }
           } else {
-            console.warn("⚠️ Error cargando facturas:", resFacturas.status)
+            console.warn("⚠️ Error cargando facturas:", resFacturas.status, resFacturas.statusText)
             setFacturasPendientes([])
           }
         } catch (err) {
@@ -154,15 +157,18 @@ export function Pagos() {
           if (resPagos.ok) {
             const data = await resPagos.json()
             if (Array.isArray(data)) {
-              // FILTRO DE USUARIO OBLIGATORIO
+              console.log("✅ Pagos recientes cargados:", data.length)
+              // El backend ya filtra por usuarioId, pero hacemos validación adicional
               const misPagos = data.filter(
-                (p: PagoReciente) => String(p.usuarioId || p.usuario?.id) === String(usuario.id)
+                (p: PagoReciente) => String(p.usuarioId) === String(usuario.id)
               )
-              console.log("✅ Pagos recientes cargados:", misPagos.length)
               setPagosRecientes(misPagos)
+            } else {
+              console.warn("⚠️ Respuesta de pagos no es array:", data)
+              setPagosRecientes([])
             }
           } else {
-            console.warn("⚠️ Error cargando pagos:", resPagos.status)
+            console.warn("⚠️ Error cargando pagos:", resPagos.status, resPagos.statusText)
             setPagosRecientes([])
           }
         } catch (err) {
