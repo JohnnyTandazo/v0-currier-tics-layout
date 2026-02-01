@@ -64,15 +64,34 @@ const ICON_TYPES = [
   { id: "pin", label: "Otro", icon: MapPin },
 ] as const
 
-// Obtener ID numérico del usuario desde localStorage
-const getCleanUserId = (): number | null => {
+// Función auxiliar a prueba de balas para extraer el ID seguro
+const getSafeUserId = (): number | null => {
+  if (typeof window === "undefined") return null // Evitar error de servidor
+
   try {
-    const stored = localStorage.getItem("usuario")
-    if (!stored) return null
-    const parsed = JSON.parse(stored)
-    return parsed.id ? parseInt(parsed.id) : null
-  } catch (e) {
-    console.error("Error parseando usuario:", e)
+    // INTENTO 1: Buscar en el objeto 'usuario' (donde confirmamos que está el dato)
+    const usuarioStr = localStorage.getItem("usuario")
+    if (usuarioStr) {
+      const usuarioObj = JSON.parse(usuarioStr)
+      if (usuarioObj && usuarioObj.id) {
+        const cleanId = Number(usuarioObj.id)
+        console.log("✅ ID extraído de localStorage['usuario']:", cleanId)
+        return cleanId
+      }
+    }
+
+    // INTENTO 2: Buscar en 'userId' por si acaso
+    const simpleId = localStorage.getItem("userId")
+    if (simpleId) {
+      const cleanId = Number(simpleId)
+      console.log("✅ ID extraído de localStorage['userId']:", cleanId)
+      return cleanId
+    }
+
+    console.warn("⚠️ No se encontró ID en localStorage")
+    return null
+  } catch (error) {
+    console.error("🔥 Error extrayendo ID:", error)
     return null
   }
 }
@@ -85,7 +104,7 @@ export function MisDirectiones() {
   const [isSaving, setIsSaving] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [usuarioId, setUsuarioId] = useState<number | null>(null)
 
   const [form, setForm] = useState<FormDireccion>({
     alias: "",
@@ -101,49 +120,67 @@ export function MisDirectiones() {
 
   // Verificar autenticación al montar
   useEffect(() => {
-    const userId = getCleanUserId()
-    setIsAuthenticated(userId !== null)
-  }, [])
-
-  // Cargar direcciones
-  const cargarDirecciones = useCallback(async () => {
-    const userId = getCleanUserId()
-    if (!userId) {
-      setIsLoading(false)
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const url = `/api/direcciones?usuarioId=${userId}`
-      const response = await fetch(url, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      })
-
-      if (!response.ok) {
-        throw new Error("No se pudieron cargar las direcciones")
-      }
-
-      const data = await response.json()
-      if (Array.isArray(data)) {
-        setDirecciones(data)
-      }
-    } catch (error) {
-      console.error("Error al cargar direcciones:", error)
+    const id = getSafeUserId()
+    if (id) {
+      console.log("🔐 Usuario autenticado con ID:", id)
+      setUsuarioId(id)
+    } else {
+      console.error("🚨 No se encontró sesión de usuario")
       toast({
         title: "Error",
-        description: "No se pudieron cargar tus direcciones",
+        description: "No se encontró sesión de usuario",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
   }, [toast])
 
+  // Cargar direcciones
+  const cargarDirecciones = useCallback(
+    async (id: number | null) => {
+      if (!id) {
+        console.warn("⚠️ No hay ID de usuario, abortando cargarDirecciones")
+        setIsLoading(false)
+        return
+      }
+
+      setIsLoading(true)
+      try {
+        const url = `/api/direcciones?usuarioId=${id}`
+        console.log("📥 GET:", url)
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        })
+
+        if (!response.ok) {
+          throw new Error("No se pudieron cargar las direcciones")
+        }
+
+        const data = await response.json()
+        console.log("✅ Direcciones cargadas:", data)
+        if (Array.isArray(data)) {
+          setDirecciones(data)
+        }
+      } catch (error) {
+        console.error("🔥 Error al cargar direcciones:", error)
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar tus direcciones",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [toast]
+  )
+
   useEffect(() => {
-    cargarDirecciones()
-  }, [cargarDirecciones])
+    if (usuarioId) {
+      cargarDirecciones(usuarioId)
+    }
+  }, [usuarioId, cargarDirecciones])
 
   // Abrir dialog para agregar nueva dirección
   const handleAgregar = () => {
@@ -186,12 +223,12 @@ export function MisDirectiones() {
 
   // Guardar dirección (crear o actualizar)
   const handleGuardar = async () => {
-    // Obtener ID del usuario
-    const userId = getCleanUserId()
-    if (!userId) {
+    // Obtener ID del usuario fresco
+    const cleanId = getSafeUserId()
+    if (!cleanId) {
       toast({
         title: "Error",
-        description: "Debes estar autenticado para guardar direcciones",
+        description: "Error: Usuario no identificado",
         variant: "destructive",
       })
       return
@@ -237,7 +274,7 @@ export function MisDirectiones() {
     setIsSaving(true)
     try {
       const payload = {
-        usuarioId: userId,
+        usuarioId: cleanId,
         alias: form.alias,
         callePrincipal: form.callePrincipal,
         calleSecundaria: form.calleSecundaria || null,
@@ -246,6 +283,8 @@ export function MisDirectiones() {
         referencia: form.referencia || null,
         esPrincipal: form.esPrincipal,
       }
+
+      console.log("📤 Payload LIMPIO enviado:", payload)
 
       let response
       if (editingId) {
@@ -277,7 +316,7 @@ export function MisDirectiones() {
       })
 
       setIsDialogOpen(false)
-      cargarDirecciones()
+      cargarDirecciones(usuarioId)
     } catch (error) {
       toast({
         title: "Error",
@@ -295,17 +334,18 @@ export function MisDirectiones() {
       return
     }
 
-    const userId = getCleanUserId()
-    if (!userId) {
+    const cleanId = getSafeUserId()
+    if (!cleanId) {
       toast({
         title: "Error",
-        description: "Debes estar autenticado para eliminar direcciones",
+        description: "Error: Usuario no identificado",
         variant: "destructive",
       })
       return
     }
 
     try {
+      console.log("🗑️ Eliminando dirección ID:", id, "para usuarioId:", cleanId)
       const response = await fetch(`/api/direcciones/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -320,7 +360,7 @@ export function MisDirectiones() {
         description: "Tu dirección se eliminó correctamente",
       })
 
-      cargarDirecciones()
+      cargarDirecciones(usuarioId)
     } catch (error) {
       toast({
         title: "Error",
@@ -371,7 +411,7 @@ export function MisDirectiones() {
       )}
 
       {/* Not Authenticated */}
-      {!isAuthenticated && !isLoading && (
+      {!usuarioId && !isLoading && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <AlertCircle className="h-12 w-12 text-amber-600 mb-3" />
@@ -391,7 +431,7 @@ export function MisDirectiones() {
       )}
 
       {/* Empty State */}
-      {!isLoading && isAuthenticated && direcciones.length === 0 && (
+      {!isLoading && usuarioId && direcciones.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <MapPinIcon className="h-12 w-12 text-muted-foreground/50 mb-3" />
@@ -412,7 +452,7 @@ export function MisDirectiones() {
       )}
 
       {/* Lista de Direcciones */}
-      {!isLoading && isAuthenticated && direcciones.length > 0 && (
+      {!isLoading && usuarioId && direcciones.length > 0 && (
         <div className="grid gap-3">
           {direcciones.map((dir) => (
             <Card key={dir.id} className="border-border/50 hover:border-border transition-colors">
