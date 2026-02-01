@@ -254,6 +254,17 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
 
         console.log("ENVÍOS FILTRADOS:", misEnvios.length, "registros")
         console.log("🔥 PRIMER ENVÍO DESPUÉS DE NORMALIZAR:", misEnvios[0])
+        
+        // 🔥 LOGS ESPECÍFICOS PARA DEBUG: Buscar el objeto RAW del backend que corresponde al ID 10
+        if (misEnvios.length > 0 && misEnvios[0].id === 10) {
+          const objetoRawID10 = data.find((p: any) => p.id === 10)
+          console.log("🔥🔥🔥 OBJETO RAW DEL BACKEND PARA ID 10:")
+          console.log("    trackingNumber:", objetoRawID10?.trackingNumber)
+          console.log("    trackingId:", objetoRawID10?.trackingId)
+          console.log("    numeroGuia:", objetoRawID10?.numeroGuia)
+          console.log("    OBJETO COMPLETO:", objetoRawID10)
+        }
+        
         setEnvios(misEnvios)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error")
