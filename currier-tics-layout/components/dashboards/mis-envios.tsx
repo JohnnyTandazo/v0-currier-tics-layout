@@ -213,9 +213,18 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         // 🔥 LOG URGENTE: Ver estructura real de datos del backend
         console.log("🔥 DATOS RECIBIDOS DEL BACKEND - Primera instancia:")
         if (data.length > 0) {
-          console.log("🔥 Estructura completa:", data[0])
-          console.log("🔥 Campos disponibles:", Object.keys(data[0]))
-          console.log("🔥 ID field:", data[0].id || data[0].idEnvio || data[0].id_envio || data[0].numeroGuia || "NO ENCONTRADO")
+          console.log("🔥 Estructura completa objeto 0:", data[0])
+          console.log("🔥 Campos disponibles en objeto 0:", Object.keys(data[0]))
+          console.log("🔥 Todos los IDs posibles:")
+          console.log("    p.id:", data[0].id)
+          console.log("    p.idEnvio:", data[0].idEnvio)
+          console.log("    p.id_envio:", data[0].id_envio)
+          console.log("    p.paqueteId:", data[0].paqueteId)
+          console.log("    p.id_paquete:", data[0].id_paquete)
+          console.log("    p.numeroGuia:", data[0].numeroGuia)
+          console.log("    p.numero_guia:", data[0].numero_guia)
+          console.log("    p.referencia:", data[0].referencia)
+          console.log("    p.reference:", data[0].reference)
         }
         
         console.log("USUARIO LOGUEADO:", usuarioStored)
@@ -224,15 +233,17 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         // ✅ MAPEO DE CAMPOS: Normalizar estructura del backend
         const normalizedEnvios = data.map((p: any, index: number) => {
           // CRÍTICO: Validar que siempre haya un ID válido
-          const finalId = p.id || p.idEnvio || p.id_envio || p.paqueteId || p.id_paquete
+          const finalId = p.id || p.idEnvio || p.id_envio || p.paqueteId || p.id_paquete || p.numeroGuia || p.numero_guia || p.referencia || p.reference
           
           if (!finalId) {
-            console.error("⚠️ [MAPEO] Envío sin ID en índice", index, ":", p)
+            console.error("⚠️ [MAPEO] Objeto en índice", index, "NO TIENE ningún campo de ID:")
+            console.error("    Objeto completo:", p)
+            console.error("    Campos:", Object.keys(p))
           }
           
-          return {
-            // Si el backend manda diferentes nombres, aquí hacemos el mapeo
-            id: finalId || index, // Usar índice solo como último recurso (NO random)
+          const envioNormalizado = {
+            // CRÍTICO: Usar el ID real del backend, NUNCA el índice
+            id: finalId || undefined, // Si no hay ID, lo dejamos undefined para detectarlo fácilmente
             trackingId: p.trackingId || p.tracking || p.numeroGuia || p.numero_guia || p.trackingNumber || `PKG-${index}`,
             fecha: p.fecha || p.fechaCreacion || p.createdAt || new Date().toISOString(),
             destinatario: p.destinatario || p.recipient || p.nombre_destinatario || "SIN-DESTINATARIO",
@@ -242,6 +253,9 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
             descripcion: p.descripcion || p.description || "SIN-DESCRIPCIÓN",
             usuarioId: p.usuarioId || p.usuario?.id || p.id_usuario || p.usuario_id || usuarioStored.id,
           }
+
+          console.log(`✅ [MAPEO] Índice ${index} - ID asignado:`, envioNormalizado.id, "- Objeto mapeado:", envioNormalizado)
+          return envioNormalizado
         })
 
         console.log("✅ ENVÍOS NORMALIZADOS (primero):", normalizedEnvios[0])
