@@ -301,7 +301,13 @@ export function EnvioTimeline({ envioId, onBack }: EnvioTimelineProps) {
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Destinatario</p>
-            <p className="font-medium">{envio?.destinatario || "N/A"}</p>
+            <div>
+              <p className="font-medium">{envio?.destinatarioNombre || envio?.destinatario || "Sin nombre"}</p>
+              <p className="text-sm text-muted-foreground">{envio?.destinatarioCiudad || "Sin ciudad"}</p>
+              {envio?.destinatarioDireccion && (
+                <p className="text-sm text-muted-foreground">{envio.destinatarioDireccion}</p>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
