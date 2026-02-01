@@ -499,10 +499,10 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                           size="sm"
                           onClick={() => {
                             console.log("🖱️ [Frontend] Click en Ver Detalles")
-                            console.log("  ├─ envio.id:", envio.id, "tipo:", typeof envio.id)
-                            console.log("  ├─ envio.trackingId:", envio.trackingId)
+                            console.log("  ├─ envio.trackingId:", envio.trackingId, "tipo:", typeof envio.trackingId)
+                            console.log("  ├─ envio.id (interno):", envio.id)
                             console.log("  └─ objeto completo:", envio)
-                            handleVerDetalles(envio.id)
+                            handleVerDetalles(envio.trackingId)
                           }}
                           disabled={loadingDetalles}
                           className="border-border/50 hover:bg-accent/50"
