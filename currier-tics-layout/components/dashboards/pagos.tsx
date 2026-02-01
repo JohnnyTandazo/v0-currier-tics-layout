@@ -490,16 +490,6 @@ export function Pagos() {
                         )
                       })}
                     </SelectContent>
-                          label = `Factura #${factura.numeroFactura || factura.id} - $${(factura.monto || 0).toFixed(2)}`
-                        }
-                        
-                        return (
-                          <SelectItem key={factura.id} value={factura.id.toString()}>
-                            {label}
-                          </SelectItem>
-                        )
-                      })}
-                    </SelectContent>
                   </Select>
                 )}
               </div>
