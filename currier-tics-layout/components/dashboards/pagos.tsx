@@ -46,8 +46,9 @@ interface Usuario {
 
 interface FacturaPendiente {
   id: number
-  numeroFactura: string
-  total: number
+  numeroFactura: string | null
+  monto: number
+  estado?: string
   fechaVencimiento: string
   usuarioId?: number
   usuario?: { id: number }
@@ -114,14 +115,19 @@ export function Pagos() {
   // Fetch pagos SOLO si hay usuario.id válido
   useEffect(() => {
     if (!usuario || !usuario.id) {
+      console.log("⚠️ No hay usuario logueado o no tiene ID")
       setLoading(false)
       return
     }
 
+    console.log("👤 Usuario detectado:", JSON.stringify(usuario, null, 2))
+
     const fetchData = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL
+        console.log("🌐 API URL:", apiUrl)
         if (!apiUrl) {
+          console.error("❌ API URL no configurada")
           setLoading(false)
           return
         }
@@ -239,7 +245,7 @@ export function Pagos() {
   }
 
   // Calcular totales usando SOLO datos filtrados del usuario
-  const totalPendiente = facturasPendientes.reduce((acc, f) => acc + (f.total || 0), 0)
+  const totalPendiente = facturasPendientes.reduce((acc, f) => acc + (f.monto || 0), 0)
   const totalPagado = pagosRecientes.reduce((acc, p) => acc + (p.monto || 0), 0)
 
   // Estado de carga
@@ -366,7 +372,14 @@ export function Pagos() {
                 ) : (
                   <Select
                     value={formData.facturaId}
-                    onValueChange={(v) => handleFormChange("facturaId", v)}
+                    onValueChange={(v) => {
+                      handleFormChange("facturaId", v)
+                      // Auto-fill monto when factura is selected
+                      const selectedFactura = facturasPendientes.find(f => f.id.toString() === v)
+                      if (selectedFactura) {
+                        setFormData(prev => ({ ...prev, monto: selectedFactura.monto.toString() }))
+                      }
+                    }}
                   >
                     <SelectTrigger className="bg-background/50 border-border/50">
                       <SelectValue placeholder="Selecciona una factura pendiente" />
@@ -374,12 +387,7 @@ export function Pagos() {
                     <SelectContent>
                       {facturasPendientes.map((factura) => (
                         <SelectItem key={factura.id} value={factura.id.toString()}>
-                          <div className="flex items-center justify-between gap-4">
-                            <span>{factura.numeroFactura}</span>
-                            <span className="text-muted-foreground">
-                              ${(factura.total || 0).toFixed(2)}
-                            </span>
-                          </div>
+                          Factura #{factura.numeroFactura || factura.id} - ${(factura.monto || 0).toFixed(2)}
                         </SelectItem>
                       ))}
                     </SelectContent>
