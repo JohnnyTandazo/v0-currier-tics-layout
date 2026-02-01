@@ -44,11 +44,6 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
       setIsLoading(true)
       setError(null)
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL
-        if (!apiUrl) {
-          throw new Error("NEXT_PUBLIC_API_URL no está configurada")
-        }
-
         const usuario = JSON.parse(localStorage.getItem("usuario") || "null")
         if (!usuario || !usuario.id) {
           console.error("Usuario no autenticado o inválido")
@@ -62,7 +57,7 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
           throw new Error("Usuario no autenticado")
         }
 
-        const url = `${apiUrl}/api/paquetes?usuarioId=${usuarioId}`
+        const url = `/api/paquetes?usuarioId=${encodeURIComponent(String(usuarioId))}`
         console.log("Obteniendo paquetes del usuario:", url)
 
         const data = await safeFetch(url)

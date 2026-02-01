@@ -157,12 +157,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         
         setUsuario(usuarioStored)
         
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL
-        if (!apiUrl) {
-          throw new Error("NEXT_PUBLIC_API_URL is not configured")
-        }
-
-        const url = `${apiUrl}/api/paquetes`
+        const url = `/api/envios?usuarioId=${encodeURIComponent(String(usuarioStored.id))}`
         const data = await safeFetch(url)
         
         // Verificar que data sea un array antes de filtrar
