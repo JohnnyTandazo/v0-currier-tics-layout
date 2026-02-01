@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { ClientDashboard } from "@/components/dashboards/client-dashboard"
 import { OperatorDashboard } from "@/components/dashboards/operator-dashboard"
 import { TrackingTimeline } from "@/components/dashboards/tracking-timeline"
+import { EnvioTimeline } from "@/components/dashboards/envio-timeline"
 import { MisPaquetes } from "@/components/dashboards/mis-paquetes"
 import { MisEnvios } from "@/components/dashboards/mis-envios"
 import { Facturas } from "@/components/dashboards/facturas"
@@ -34,14 +35,16 @@ interface DashboardLayoutProps {
   onClientViewChange: (view: ClientView) => void
   onLogout: () => void
   onViewTracking: (trackingId: string) => void
+  onViewEnvioDetails: (envioId: string) => void
   onBackFromTracking: () => void
   selectedTrackingId: string | null
+  trackingMode: "paquetes" | "envios"
 }
 
 const roleLabels: Record<UserRole, string> = {
   client: "Panel del Cliente",
   operator: "Operador / Bodega",
-  tracking: "Seguimiento de Envio",
+  tracking: "Seguimiento",
 }
 
 const clientViewLabels: Record<ClientView, string> = {
@@ -64,8 +67,10 @@ export default function DashboardLayout({
   onClientViewChange,
   onLogout,
   onViewTracking,
+  onViewEnvioDetails,
   onBackFromTracking,
   selectedTrackingId,
+  trackingMode,
 }: DashboardLayoutProps) {
   return (
     <SidebarProvider>
@@ -98,7 +103,7 @@ export default function DashboardLayout({
             <ClientDashboard onViewTracking={onViewTracking} />
           )}
           {currentRole === "client" && currentClientView === "envios" && (
-            <MisEnvios onViewDetails={onViewTracking} />
+            <MisEnvios onViewDetails={onViewEnvioDetails} />
           )}
           {currentRole === "client" && currentClientView === "facturas" && (
             <Facturas />
@@ -119,10 +124,17 @@ export default function DashboardLayout({
             <OperatorDashboard />
           )}
           {currentRole === "tracking" && (
-            <TrackingTimeline
-              trackingId={selectedTrackingId || "TRK-2024-001234"}
-              onBack={onBackFromTracking}
-            />
+            trackingMode === "envios" ? (
+              <EnvioTimeline
+                envioId={selectedTrackingId || "1"}
+                onBack={onBackFromTracking}
+              />
+            ) : (
+              <TrackingTimeline
+                trackingId={selectedTrackingId || "TRK-2024-001234"}
+                onBack={onBackFromTracking}
+              />
+            )
           )}
         </main>
       </SidebarInset>

@@ -44,6 +44,7 @@ export default function Home() {
   const [currentRole, setCurrentRole] = useState<UserRole>("client")
   const [currentClientView, setCurrentClientView] = useState<ClientView>("dashboard")
   const [selectedTrackingId, setSelectedTrackingId] = useState<string | null>(null)
+  const [trackingMode, setTrackingMode] = useState<"paquetes" | "envios">("paquetes")
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -94,7 +95,14 @@ export default function Home() {
   }
 
   const handleViewTracking = (trackingId: string) => {
+    setTrackingMode("paquetes")
     setSelectedTrackingId(trackingId)
+    setCurrentRole("tracking")
+  }
+
+  const handleViewEnvioDetails = (envioId: string) => {
+    setTrackingMode("envios")
+    setSelectedTrackingId(envioId)
     setCurrentRole("tracking")
   }
 
@@ -131,8 +139,10 @@ export default function Home() {
         onClientViewChange={handleClientViewChange}
         onLogout={handleLogout}
         onViewTracking={handleViewTracking}
+        onViewEnvioDetails={handleViewEnvioDetails}
         onBackFromTracking={handleBackFromTracking}
         selectedTrackingId={selectedTrackingId}
+        trackingMode={trackingMode}
       />
     </Suspense>
   )

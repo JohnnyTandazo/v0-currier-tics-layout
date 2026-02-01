@@ -57,7 +57,7 @@ interface EnvioDetalles extends Envio {
 }
 
 interface MisEnviosProps {
-  onViewDetails?: (trackingId: string) => void
+  onViewDetails?: (envioId: string) => void
 }
 
 export function MisEnvios({ onViewDetails }: MisEnviosProps) {
@@ -117,12 +117,17 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
       console.log("✅ [Frontend] ÉXITO - Datos del envío:", data)
 
       const isFallback = (data as any)._fallback
+      if (onViewDetails) {
+        onViewDetails(String(envioId))
+        return
+      }
+
       const mensaje = isFallback
         ? "⚠️ Datos no disponibles (usando fallback)"
         : "✅ Detalles del envío"
 
       alert(
-        `${mensaje}\n\nTracking: ${data.trackingId}\nEstado: ${data.estado}\nDestinatario: ${data.destinatario}`
+        `${mensaje}\n\nID: ${envioId}\nEstado: ${data.estado}\nDestinatario: ${data.destinatario}`
       )
     } catch (err: any) {
       console.error("💥 [Frontend ERROR] Error crítico:", err)
