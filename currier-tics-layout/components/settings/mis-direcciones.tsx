@@ -64,6 +64,19 @@ const ICON_TYPES = [
   { id: "pin", label: "Otro", icon: MapPin },
 ] as const
 
+// Obtener ID numérico del usuario desde localStorage
+const getCleanUserId = (): number | null => {
+  try {
+    const stored = localStorage.getItem("usuario")
+    if (!stored) return null
+    const parsed = JSON.parse(stored)
+    return parsed.id ? parseInt(parsed.id) : null
+  } catch (e) {
+    console.error("Error parseando usuario:", e)
+    return null
+  }
+}
+
 export function MisDirectiones() {
   const { toast } = useToast()
 
@@ -72,7 +85,6 @@ export function MisDirectiones() {
   const [isSaving, setIsSaving] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   const [form, setForm] = useState<FormDireccion>({
@@ -87,32 +99,23 @@ export function MisDirectiones() {
 
   const [selectedIcon, setSelectedIcon] = useState<string>("home")
 
-  // Obtener ID del usuario logueado
+  // Verificar autenticación al montar
   useEffect(() => {
-    try {
-      const usuarioStored = JSON.parse(localStorage.getItem("usuario") || "null")
-      if (usuarioStored && usuarioStored.id) {
-        setUserId(String(usuarioStored.id))
-        setIsAuthenticated(true)
-      } else {
-        setIsAuthenticated(false)
-      }
-    } catch (error) {
-      console.error("Error al obtener usuario:", error)
-      setIsAuthenticated(false)
-    }
+    const userId = getCleanUserId()
+    setIsAuthenticated(userId !== null)
   }, [])
 
   // Cargar direcciones
   const cargarDirecciones = useCallback(async () => {
-    if (!userId || !isAuthenticated) {
+    const userId = getCleanUserId()
+    if (!userId) {
       setIsLoading(false)
       return
     }
 
     setIsLoading(true)
     try {
-      const url = `/api/direcciones?usuarioId=${encodeURIComponent(userId)}`
+      const url = `/api/direcciones?usuarioId=${userId}`
       const response = await fetch(url, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
@@ -136,13 +139,11 @@ export function MisDirectiones() {
     } finally {
       setIsLoading(false)
     }
-  }, [userId, isAuthenticated, toast])
+  }, [toast])
 
   useEffect(() => {
-    if (userId && isAuthenticated) {
-      cargarDirecciones()
-    }
-  }, [userId, isAuthenticated, cargarDirecciones])
+    cargarDirecciones()
+  }, [cargarDirecciones])
 
   // Abrir dialog para agregar nueva dirección
   const handleAgregar = () => {
@@ -185,8 +186,9 @@ export function MisDirectiones() {
 
   // Guardar dirección (crear o actualizar)
   const handleGuardar = async () => {
-    // Validar autenticación
-    if (!userId || !isAuthenticated) {
+    // Obtener ID del usuario
+    const userId = getCleanUserId()
+    if (!userId) {
       toast({
         title: "Error",
         description: "Debes estar autenticado para guardar direcciones",
@@ -195,7 +197,7 @@ export function MisDirectiones() {
       return
     }
 
-    // Validar
+    // Validar campos
     if (!form.alias.trim()) {
       toast({
         title: "Error",
@@ -293,7 +295,8 @@ export function MisDirectiones() {
       return
     }
 
-    if (!userId || !isAuthenticated) {
+    const userId = getCleanUserId()
+    if (!userId) {
       toast({
         title: "Error",
         description: "Debes estar autenticado para eliminar direcciones",
