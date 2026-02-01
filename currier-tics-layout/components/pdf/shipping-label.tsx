@@ -94,6 +94,9 @@ export default function ShippingLabel({ envio }: { envio: any }) {
     )
   }
 
+  // Función para formatear dinero
+  const formatMoney = (amount: any) => Number(amount || 0).toFixed(2)
+
   return (
     <Document>
       <Page style={styles.page}>
@@ -137,6 +140,30 @@ export default function ShippingLabel({ envio }: { envio: any }) {
           <Text style={styles.value}>
             Peso: {envio.pesoLibras || 0} lb
           </Text>
+        </View>
+
+        {/* INFORMACIÓN FINANCIERA */}
+        <View style={styles.section}>
+          <Text style={styles.label}>INFORMACIÓN DE VALOR:</Text>
+          
+          <View style={{ marginBottom: 5 }}>
+            <Text style={styles.label}>Valor Declarado:</Text>
+            <Text style={styles.value}>
+              ${formatMoney(envio.valorDeclarado)}
+            </Text>
+          </View>
+
+          <View style={{ marginBottom: 5 }}>
+            <Text style={styles.label}>Seguro Estimado (1%):</Text>
+            <Text style={styles.value}>
+              ${formatMoney((envio.valorDeclarado || 0) * 0.01)}
+            </Text>
+          </View>
+
+          <View>
+            <Text style={styles.label}>Peso Facturable:</Text>
+            <Text style={styles.value}>{envio.pesoLibras || 0} lb</Text>
+          </View>
         </View>
 
         <Text style={styles.footer}>
