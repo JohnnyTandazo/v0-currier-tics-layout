@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useForm, Controller } from "react-hook-form"
+import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
   ArrowRight,
@@ -94,6 +95,7 @@ const getSafeUserId = (): number | null => {
 
 export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps) {
   const { toast } = useToast()
+  const router = useRouter()
 
   const [pasoActual, setPasoActual] = useState(0)
   const [userId, setUserId] = useState<number | null>(null)
@@ -309,6 +311,9 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
         description: `Guía generada: ${trackingId}`,
       })
 
+      // 🔄 Refrescar datos en tiempo real
+      router.refresh()
+      
       onSuccess?.()
       onClose?.()
     } catch (error) {
