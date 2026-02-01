@@ -42,11 +42,13 @@ export async function GET(
 
     console.log("🔎 [API] Buscando envío con ID numérico:", id);
 
-    // ✅ PROXY AL BACKEND JAVA
+    // ✅ PROXY AL BACKEND JAVA - RUTA EXACTA: /api/envios/{id}
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/envios/${id}`;
+    const endpoint = `${backendUrl}/api/envios/${id}`; // ✅ Incluye /api
     
     console.log("🌐 [API PROXY] Conectando con backend Java:", endpoint);
+    console.log("🌐 [API PROXY] URL completa:", endpoint);
+    console.log("🌐 [API PROXY] Método: GET");
 
     const response = await fetch(endpoint, {
       method: "GET",
@@ -63,7 +65,9 @@ export async function GET(
 
     // ✅ VALIDACIÓN 2: Verificar si el backend devolvió error
     if (!response.ok) {
-      console.warn("⚠️ [API] Backend devolvió error:", response.status);
+      console.error("❌ [API] Backend devolvió error:", response.status);
+      console.error("❌ [API] URL que fue llamada:", endpoint);
+      console.error("🔥 JAVA DIJO:", text); // ¡Aquí vemos qué devolvió Java!
       
       // Si el backend devuelve 404
       if (response.status === 404) {
@@ -72,18 +76,22 @@ export async function GET(
           { 
             error: "Envío no encontrado",
             message: `No existe un envío con el ID ${id}`,
-            id: id
+            id: id,
+            javaResponse: text // Debug: mostrar qué dijo Java
           },
           { status: 404 }
         );
       }
 
-      // Otros errores del backend
+      // Otros errores del backend (especialmente 400)
+      console.error("🔥 JAVA DIJO (Error 400+):", text);
       return NextResponse.json(
         { 
           error: "Error al obtener datos del backend", 
           details: text,
-          status: response.status 
+          status: response.status,
+          javaErrorMessage: text,
+          requestedUrl: endpoint
         },
         { status: response.status }
       );
@@ -193,8 +201,9 @@ export async function PUT(
 
     // Llamar al backend
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/envios/${id}`;
+    const endpoint = `${backendUrl}/api/envios/${id}`; // ✅ Incluye /api
 
+    console.log("📡 [API PUT] URL:", endpoint);
     const response = await fetch(endpoint, {
       method: "PUT",
       headers: {
@@ -207,10 +216,11 @@ export async function PUT(
     const text = await response.text();
     
     if (!response.ok) {
-      console.warn("⚠️ [API PUT] Error al actualizar:", response.status);
-      const data = text ? JSON.parse(text) : {};
+      console.error("⚠️ [API PUT] Error al actualizar:", response.status);
+      console.error("🔥 JAVA DIJO:", text);
+      const data = text ? (() => { try { return JSON.parse(text); } catch { return text; } })() : {};
       return NextResponse.json(
-        { error: "Error al actualizar envío", details: data || text },
+        { error: "Error al actualizar envío", details: data || text, javaErrorMessage: text },
         { status: response.status }
       );
     }
@@ -293,8 +303,9 @@ export async function DELETE(
     }
 
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/envios/${id}`;
+    const endpoint = `${backendUrl}/api/envios/${id}`; // ✅ Incluye /api
 
+    console.log("📡 [API DELETE] URL:", endpoint);
     const response = await fetch(endpoint, {
       method: "DELETE",
       headers: {
@@ -306,10 +317,11 @@ export async function DELETE(
     const text = await response.text();
 
     if (!response.ok) {
-      console.warn("⚠️ [API DELETE] Error al eliminar:", response.status);
-      const data = text ? JSON.parse(text) : {};
+      console.error("⚠️ [API DELETE] Error al eliminar:", response.status);
+      console.error("🔥 JAVA DIJO:", text);
+      const data = text ? (() => { try { return JSON.parse(text); } catch { return text; } })() : {};
       return NextResponse.json(
-        { error: "Error al eliminar envío", details: data || text },
+        { error: "Error al eliminar envío", details: data || text, javaErrorMessage: text },
         { status: response.status }
       );
     }
