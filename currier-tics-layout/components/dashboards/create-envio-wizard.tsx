@@ -266,9 +266,15 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
         usuario: {
           id: cleanUserId,
         },
+        // Nuevos campos de Destino (Snapshot)
+        destinatarioNombre: data.nombreDestinatario || "Destinatario",
+        destinatarioCiudad: data.ciudadDestino || "Ciudad",
+        destinatarioDireccion: data.direccionDestino || "Dirección",
+        destinatarioTelefono: data.telefonoDestinatario || "",
+        destinatarioCedula: data.cedulaDestinatario || "",
       }
 
-      console.log("📤 Payload EXACTO según contrato Backend:", JSON.stringify(payload, null, 2))
+      console.log("📤 Enviando Payload:", JSON.stringify(payload, null, 2))
 
       const response = await fetch("/api/envios", {
         method: "POST",
