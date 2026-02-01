@@ -169,14 +169,28 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           return
         }
 
-        const usuarioId = usuarioStored.id
-        console.log(`✅ Usuario autenticado: ID ${usuarioId}`)
+        // ✅ LIMPIAR ID MAL FORMADO (1:1 → 1)
+        const cleanId = String(usuarioStored.id).split(':')[0].trim()
+        console.log(`📝 ID original: ${usuarioStored.id} | ID limpio: ${cleanId}`)
+        
+        // ✅ VALIDAR que el ID sea un número
+        if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
+          console.error(`❌ ID inválido después de limpiar: ${cleanId}`)
+          setUsuario(null)
+          setEnvios([])
+          setError("Sesión inválida - ID de usuario corrupto")
+          setIsLoading(false)
+          return
+        }
+        
+        console.log(`✅ Llamando a API con ID limpio: ${cleanId}`)
+        console.log(`✅ Usuario autenticado: ID ${cleanId}`)
         
         setUsuario(usuarioStored)
         
         // ✅ FORZAR USO DE RUTA DE USUARIO - NUNCA usar /api/envios sin usuario
-        const url = `/api/envios/usuario/${encodeURIComponent(String(usuarioId))}`
-        const facturasUrl = `/api/facturas/usuario/${encodeURIComponent(String(usuarioId))}`
+        const url = `/api/envios/usuario/${encodeURIComponent(cleanId)}`
+        const facturasUrl = `/api/facturas/usuario/${encodeURIComponent(cleanId)}`
         
         console.log(`📡 Fetching envios desde: ${url}`)
         console.log(`📡 Fetching facturas desde: ${facturasUrl}`)
