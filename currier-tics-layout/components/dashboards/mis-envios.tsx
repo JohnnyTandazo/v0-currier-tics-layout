@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Filter,
   Loader2,
+  Plus,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -31,9 +32,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { safeFetch } from "@/lib/safeFetch"
 import { defensiveFetch, createFallbackEnvio } from "@/lib/defensiveFetch"
 import { formatearFecha } from "@/lib/formatDate"
+import { CreateEnvioWizard } from "./create-envio-wizard"
 
 interface Envio {
   id: number
@@ -68,6 +77,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [usuario, setUsuario] = useState<any>(null)
   const [loadingDetalles, setLoadingDetalles] = useState(false)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
   // ✅ FUNCIÓN DEFENSIVA PARA CARGAR DETALLES
   const handleVerDetalles = async (envioId: number | undefined) => {
@@ -428,11 +438,13 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                 </SelectContent>
               </Select>
               <Button
-                variant="outline"
-                size="icon"
-                className="border-border/50"
+                variant="default"
+                size="sm"
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="gap-2 bg-blue-600 hover:bg-blue-700"
               >
-                <Filter className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
+                Nuevo Envío
               </Button>
             </div>
           </div>
@@ -520,6 +532,25 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Dialog para Crear Envío */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Envío</DialogTitle>
+            <DialogDescription>
+              Completa los pasos para generar un nuevo envío nacional
+            </DialogDescription>
+          </DialogHeader>
+          <CreateEnvioWizard
+            onClose={() => setIsCreateDialogOpen(false)}
+            onSuccess={() => {
+              // Recargar la lista de envíos
+              window.location.reload()
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

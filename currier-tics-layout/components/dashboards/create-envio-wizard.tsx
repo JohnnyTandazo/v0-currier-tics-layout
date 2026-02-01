@@ -1,0 +1,582 @@
+"use client"
+
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useForm, Controller } from "react-hook-form"
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  DollarSign,
+  Home,
+  Package,
+  User,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { useToast } from "@/hooks/use-toast"
+
+interface Direccion {
+  id: string
+  alias: string
+  callePrincipal: string
+  calleSecundaria?: string
+  ciudad: string
+  telefono: string
+  referencia?: string
+  esPrincipal?: boolean
+}
+
+interface FormEnvio {
+  // Paso 1: Remitente
+  direccionOrigenId: string
+  // Paso 2: Destinatario
+  cedulaDestinatario: string
+  nombreDestinatario: string
+  telefonoDestinatario: string
+  ciudadDestino: string
+  direccionDestino: string
+  // Paso 3: Paquete
+  descripcion: string
+  peso: string
+  valorDeclarado: string
+}
+
+interface CreateEnvioWizardProps {
+  onClose?: () => void
+  onSuccess?: () => void
+}
+
+const pasos = ["Remitente", "Destinatario", "Paquete", "Confirmación"] as const
+
+export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps) {
+  const { toast } = useToast()
+
+  const [pasoActual, setPasoActual] = useState(0)
+  const [direcciones, setDirecciones] = useState<Direccion[]>([])
+  const [isLoadingDirecciones, setIsLoadingDirecciones] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const {
+    control,
+    watch,
+    handleSubmit,
+    formState: { errors },
+    trigger,
+    reset,
+  } = useForm<FormEnvio>({
+    mode: "onChange",
+    defaultValues: {
+      direccionOrigenId: "",
+      cedulaDestinatario: "",
+      nombreDestinatario: "",
+      telefonoDestinatario: "",
+      ciudadDestino: "",
+      direccionDestino: "",
+      descripcion: "",
+      peso: "",
+      valorDeclarado: "",
+    },
+  })
+
+  const formValues = watch()
+
+  const direccionSeleccionada = useMemo(() => {
+    if (!formValues.direccionOrigenId) return null
+    return direcciones.find((d) => d.id === formValues.direccionOrigenId)
+  }, [formValues.direccionOrigenId, direcciones])
+
+  const costoEstimado = useMemo(() => {
+    const peso = Number(formValues.peso || 0)
+    const valor = Number(formValues.valorDeclarado || 0)
+    const costoBase = 2.5
+    const costoPeso = peso * 1.2
+    const seguro = valor * 0.01
+    return (costoBase + costoPeso + seguro).toFixed(2)
+  }, [formValues.peso, formValues.valorDeclarado])
+
+  useEffect(() => {
+    const cargarDirecciones = async () => {
+      setIsLoadingDirecciones(true)
+      try {
+        const response = await fetch("/api/direcciones", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        })
+
+        if (!response.ok) {
+          throw new Error("No se pudieron cargar las direcciones")
+        }
+
+        const data = await response.json()
+        if (Array.isArray(data)) {
+          setDirecciones(data)
+          // Auto-seleccionar la primera dirección principal o la primera disponible
+          const principal = data.find((d) => d.esPrincipal)
+          if (principal) {
+            reset({ ...formValues, direccionOrigenId: principal.id })
+          }
+        }
+      } catch (error) {
+        console.error("Error al cargar direcciones:", error)
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar tus direcciones guardadas",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingDirecciones(false)
+      }
+    }
+
+    cargarDirecciones()
+  }, [])
+
+  const validarPaso = useCallback(async (): Promise<boolean> => {
+    if (pasoActual === 0) {
+      return await trigger("direccionOrigenId")
+    }
+    if (pasoActual === 1) {
+      return await trigger([
+        "cedulaDestinatario",
+        "nombreDestinatario",
+        "telefonoDestinatario",
+        "ciudadDestino",
+        "direccionDestino",
+      ])
+    }
+    if (pasoActual === 2) {
+      return await trigger(["descripcion", "peso", "valorDeclarado"])
+    }
+    return true
+  }, [pasoActual, trigger])
+
+  const avanzar = async () => {
+    const esValido = await validarPaso()
+    if (esValido && pasoActual < pasos.length - 1) {
+      setPasoActual((prev) => prev + 1)
+    }
+  }
+
+  const retroceder = () => {
+    if (pasoActual > 0) {
+      setPasoActual((prev) => prev - 1)
+    }
+  }
+
+  const onSubmit = async (data: FormEnvio) => {
+    setIsSaving(true)
+    try {
+      const payload = {
+        direccionOrigenId: data.direccionOrigenId,
+        cedulaDestinatario: data.cedulaDestinatario,
+        nombreDestinatario: data.nombreDestinatario,
+        telefonoDestinatario: data.telefonoDestinatario,
+        ciudadDestino: data.ciudadDestino,
+        direccionDestino: data.direccionDestino,
+        descripcion: data.descripcion,
+        pesoLibras: Number(data.peso),
+        valorDeclarado: Number(data.valorDeclarado),
+        tipo: "ENVIO",
+      }
+
+      const response = await fetch("/api/envios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => "")
+        throw new Error(text || "No se pudo crear el envío")
+      }
+
+      const envioCreado = await response.json().catch(() => null)
+
+      toast({
+        title: "✅ Envío creado",
+        description: `Guía generada correctamente.`,
+      })
+
+      onSuccess?.()
+      onClose?.()
+    } catch (error) {
+      toast({
+        title: "Error al crear envío",
+        description: error instanceof Error ? error.message : "Intenta nuevamente",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto">
+      {/* Progress Bar */}
+      <div className="grid grid-cols-4 gap-2">
+        {pasos.map((paso, index) => (
+          <div
+            key={paso}
+            className={`rounded-md border px-2 py-1 text-center text-xs transition-all ${
+              index === pasoActual
+                ? "border-primary bg-primary/10 font-semibold text-primary"
+                : index < pasoActual
+                ? "border-green-500 bg-green-50 text-green-700"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            {index < pasoActual ? "✓" : index + 1}
+          </div>
+        ))}
+      </div>
+
+      <Separator />
+
+      {/* PASO 1: REMITENTE */}
+      {pasoActual === 0 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold">¿Desde dónde envías?</h3>
+
+          {isLoadingDirecciones ? (
+            <div className="text-sm text-muted-foreground">Cargando direcciones...</div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="direccionOrigen" className="text-sm">
+                Seleccionar dirección
+              </Label>
+              <Controller
+                name="direccionOrigenId"
+                control={control}
+                rules={{ required: "Debes seleccionar una dirección" }}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger
+                      id="direccionOrigen"
+                      className={`text-sm ${
+                        errors.direccionOrigenId ? "border-destructive" : ""
+                      }`}
+                    >
+                      <SelectValue placeholder="Elige una dirección" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {direcciones.map((dir) => (
+                        <SelectItem key={dir.id} value={dir.id} className="text-sm">
+                          {dir.alias} - {dir.ciudad}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.direccionOrigenId && (
+                <p className="text-xs text-destructive">{errors.direccionOrigenId.message}</p>
+              )}
+            </div>
+          )}
+
+          {direccionSeleccionada && (
+            <Card className="border-dashed bg-muted/50">
+              <CardContent className="space-y-1 pt-3 text-sm">
+                <p className="font-medium">{direccionSeleccionada.alias}</p>
+                <p className="text-xs text-muted-foreground">
+                  {direccionSeleccionada.callePrincipal}
+                </p>
+                <p className="text-xs text-muted-foreground">{direccionSeleccionada.ciudad}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* PASO 2: DESTINATARIO */}
+      {pasoActual === 1 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold">¿A quién va el envío?</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label htmlFor="cedula" className="text-xs">
+                Cédula
+              </Label>
+              <Controller
+                name="cedulaDestinatario"
+                control={control}
+                rules={{
+                  required: "Requerido",
+                  minLength: { value: 10, message: "Inválida" },
+                }}
+                render={({ field }) => (
+                  <Input
+                    id="cedula"
+                    placeholder="1234567890"
+                    {...field}
+                    className={`text-sm h-8 ${
+                      errors.cedulaDestinatario ? "border-destructive" : ""
+                    }`}
+                  />
+                )}
+              />
+              {errors.cedulaDestinatario && (
+                <p className="text-xs text-destructive">{errors.cedulaDestinatario.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="nombre" className="text-xs">
+                Nombre
+              </Label>
+              <Controller
+                name="nombreDestinatario"
+                control={control}
+                rules={{ required: "Requerido" }}
+                render={({ field }) => (
+                  <Input
+                    id="nombre"
+                    placeholder="Juan"
+                    {...field}
+                    className={`text-sm h-8 ${
+                      errors.nombreDestinatario ? "border-destructive" : ""
+                    }`}
+                  />
+                )}
+              />
+              {errors.nombreDestinatario && (
+                <p className="text-xs text-destructive">{errors.nombreDestinatario.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="telefonoDestino" className="text-xs">
+                Teléfono
+              </Label>
+              <Controller
+                name="telefonoDestinatario"
+                control={control}
+                rules={{ required: "Requerido", minLength: { value: 7, message: "Inválido" } }}
+                render={({ field }) => (
+                  <Input
+                    id="telefonoDestino"
+                    placeholder="+593..."
+                    {...field}
+                    className={`text-sm h-8 ${
+                      errors.telefonoDestinatario ? "border-destructive" : ""
+                    }`}
+                  />
+                )}
+              />
+              {errors.telefonoDestinatario && (
+                <p className="text-xs text-destructive">{errors.telefonoDestinatario.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="ciudadDestino" className="text-xs">
+                Ciudad
+              </Label>
+              <Controller
+                name="ciudadDestino"
+                control={control}
+                rules={{ required: "Requerido" }}
+                render={({ field }) => (
+                  <Input
+                    id="ciudadDestino"
+                    placeholder="Guayaquil"
+                    {...field}
+                    className={`text-sm h-8 ${errors.ciudadDestino ? "border-destructive" : ""}`}
+                  />
+                )}
+              />
+              {errors.ciudadDestino && (
+                <p className="text-xs text-destructive">{errors.ciudadDestino.message}</p>
+              )}
+            </div>
+
+            <div className="col-span-2 space-y-1">
+              <Label htmlFor="direccionDestino" className="text-xs">
+                Dirección
+              </Label>
+              <Controller
+                name="direccionDestino"
+                control={control}
+                rules={{ required: "Requerido" }}
+                render={({ field }) => (
+                  <Input
+                    id="direccionDestino"
+                    placeholder="Av. Principal 123"
+                    {...field}
+                    className={`text-sm h-8 ${
+                      errors.direccionDestino ? "border-destructive" : ""
+                    }`}
+                  />
+                )}
+              />
+              {errors.direccionDestino && (
+                <p className="text-xs text-destructive">{errors.direccionDestino.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PASO 3: PAQUETE */}
+      {pasoActual === 2 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold">Detalles del Paquete</h3>
+
+          <div className="space-y-1">
+            <Label htmlFor="descripcion" className="text-xs">
+              Descripción
+            </Label>
+            <Controller
+              name="descripcion"
+              control={control}
+              rules={{ required: "Requerida", minLength: { value: 5, message: "Mín. 5 car." } }}
+              render={({ field }) => (
+                <textarea
+                  id="descripcion"
+                  placeholder="Ej: Ropa, zapatos..."
+                  className={`w-full rounded-md border px-2 py-1 text-sm resize-none h-16 ${
+                    errors.descripcion ? "border-destructive" : "border-input"
+                  }`}
+                  {...field}
+                />
+              )}
+            />
+            {errors.descripcion && (
+              <p className="text-xs text-destructive">{errors.descripcion.message}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label htmlFor="peso" className="text-xs">
+                Peso (lb)
+              </Label>
+              <Controller
+                name="peso"
+                control={control}
+                rules={{
+                  required: "Requerido",
+                  pattern: { value: /^\d+(\.\d{1,2})?$/, message: "Inválido" },
+                }}
+                render={({ field }) => (
+                  <Input
+                    id="peso"
+                    type="number"
+                    step="0.1"
+                    placeholder="2.5"
+                    {...field}
+                    className={`text-sm h-8 ${errors.peso ? "border-destructive" : ""}`}
+                  />
+                )}
+              />
+              {errors.peso && (
+                <p className="text-xs text-destructive">{errors.peso.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="valor" className="text-xs">
+                Valor (USD)
+              </Label>
+              <Controller
+                name="valorDeclarado"
+                control={control}
+                rules={{ required: "Requerido", pattern: { value: /^\d+(\.\d{1,2})?$/, message: "Inválido" } }}
+                render={({ field }) => (
+                  <Input
+                    id="valor"
+                    type="number"
+                    step="0.01"
+                    placeholder="50.00"
+                    {...field}
+                    className={`text-sm h-8 ${errors.valorDeclarado ? "border-destructive" : ""}`}
+                  />
+                )}
+              />
+              {errors.valorDeclarado && (
+                <p className="text-xs text-destructive">{errors.valorDeclarado.message}</p>
+              )}
+            </div>
+          </div>
+
+          <Card className="border-dashed bg-blue-50">
+            <CardContent className="flex items-center justify-between pt-2 pb-2 px-3">
+              <p className="text-xs text-muted-foreground">Costo Estimado</p>
+              <p className="text-lg font-bold text-blue-600">${costoEstimado}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* PASO 4: CONFIRMACIÓN */}
+      {pasoActual === 3 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold">Resumen del Envío</h3>
+
+          <div className="space-y-2 text-sm">
+            <Card className="border-dashed">
+              <CardContent className="space-y-1 pt-3">
+                <p className="text-xs text-muted-foreground">Remitente</p>
+                <p className="font-medium text-sm">{direccionSeleccionada?.alias}</p>
+                <p className="text-xs text-muted-foreground">{direccionSeleccionada?.ciudad}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-dashed">
+              <CardContent className="space-y-1 pt-3">
+                <p className="text-xs text-muted-foreground">Destinatario</p>
+                <p className="font-medium text-sm">{formValues.nombreDestinatario}</p>
+                <p className="text-xs text-muted-foreground">{formValues.ciudadDestino}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-primary bg-primary/5">
+              <CardContent className="flex items-center justify-between pt-3">
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold text-primary">${costoEstimado}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      <Separator />
+
+      {/* Botones */}
+      <div className="flex items-center justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={retroceder}
+          disabled={pasoActual === 0}
+        >
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Atrás
+        </Button>
+
+        {pasoActual < pasos.length - 1 ? (
+          <Button type="button" size="sm" onClick={avanzar} disabled={isLoadingDirecciones}>
+            Continuar
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Button>
+        ) : (
+          <Button type="submit" size="sm" disabled={isSaving} className="gap-1">
+            {isSaving ? "Generando..." : "Generar Envío"}
+            <CheckCircle2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </form>
+  )
+}
