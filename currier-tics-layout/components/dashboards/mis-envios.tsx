@@ -9,6 +9,7 @@ import {
   CheckCircle,
   AlertTriangle,
   AlertCircle,
+  Clock,
   Filter,
   Loader2,
   Plus,
@@ -53,6 +54,7 @@ interface Envio {
   destinatarioDireccion?: string
   direccion: string
   estado: "EN_TRANSITO" | "ENTREGADO" | "RETENIDO" | "PROCESANDO" | "EN_ADUANA"
+  estadoPago?: "PAGADA" | "PENDIENTE" | "VENCIDA" | "ANULADA" | "DESCONOCIDO"
   peso: number
   descripcion: string
   usuarioId: number
@@ -170,14 +172,24 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         setUsuario(usuarioStored)
         
         const url = `/api/envios?usuarioId=${encodeURIComponent(String(usuarioStored.id))}`
-        const data = await safeFetch(url)
-        
+        const facturasUrl = `/api/facturas/usuario/${encodeURIComponent(String(usuarioStored.id))}`
+        const [data, facturasData] = await Promise.all([safeFetch(url), safeFetch(facturasUrl)])
+
         // Verificar que data sea un array antes de filtrar
         if (!Array.isArray(data)) {
           console.error("❌ Datos no son array:", data)
           setEnvios([])
           return
         }
+
+        const facturasArray = Array.isArray(facturasData) ? facturasData : []
+        const facturaMap = new Map<string, string>()
+        facturasArray.forEach((f: any) => {
+          const envioId = f.envioId || f.envio?.id
+          if (envioId) {
+            facturaMap.set(String(envioId), f.estado || "PENDIENTE")
+          }
+        })
         
         // 🔥 LOG URGENTE: Ver estructura real de datos del backend
         console.log("🔥 DATOS RECIBIDOS DEL BACKEND - Primera instancia:")
@@ -240,10 +252,11 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
             destinatarioDireccion: p.destinatarioDireccion || p.direccion || p.address || p.direccion_envio || "SIN-DIRECCIÓN",
             direccion: p.destinatarioDireccion || p.direccion || p.address || p.direccion_envio || "SIN-DIRECCIÓN",
             estado: p.estado || p.status || "PROCESANDO",
+            estadoPago: (facturaMap.get(String(finalId)) || "PENDIENTE") as "PAGADA" | "PENDIENTE" | "VENCIDA" | "ANULADA" | "DESCONOCIDO",
             peso: p.pesoLibras || p.peso || p.weight || 0,
             descripcion: p.descripcion || p.description || "SIN-DESCRIPCIÓN",
             usuarioId: p.usuario?.id || p.usuarioId || p.id_usuario || p.usuario_id || usuarioStored.id,
-          }
+          } as Envio
 
           console.log(`✅ [MAPEO ${index}] ID: ${envioNormalizado.id} | trackingId: "${envioNormalizado.trackingId}"`)
           return envioNormalizado
@@ -462,6 +475,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                 <TableHead className="text-muted-foreground">Destinatario</TableHead>
                 <TableHead className="text-muted-foreground hidden md:table-cell">Descripción</TableHead>
                 <TableHead className="text-muted-foreground">Estado</TableHead>
+                <TableHead className="text-muted-foreground">Estado de Pago</TableHead>
                 <TableHead className="text-right text-muted-foreground">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -469,6 +483,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
               {filteredEnvios.length > 0 ? (
                 filteredEnvios.map((envio) => {
                   const statusConfig = getStatusConfig(envio.estado)
+                  const pagoStatusConfig = getPagoStatusConfig(envio.estadoPago)
                   return (
                     <TableRow key={envio.id} className="border-border/50">
                       <TableCell className="font-mono text-sm text-foreground">
@@ -499,6 +514,15 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                           {statusConfig.label}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={`gap-1.5 ${pagoStatusConfig.color}`}
+                        >
+                          {pagoStatusConfig.icon}
+                          {pagoStatusConfig.label}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="outline"
@@ -527,7 +551,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                     <Package className="mx-auto h-10 w-10 mb-3 opacity-50" />
                     <p>No se encontraron envíos</p>
                     <p className="text-sm">Intenta con otros términos de búsqueda</p>
@@ -590,4 +614,35 @@ const getStatusConfig = (estado: string) => {
     },
   }
   return configs[estado] || configs.PROCESANDO
+}
+
+const getPagoStatusConfig = (estado?: string) => {
+  const configs: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+    PAGADA: {
+      color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      icon: <CheckCircle className="h-3 w-3" />,
+      label: "Pagada",
+    },
+    PENDIENTE: {
+      color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+      icon: <Clock className="h-3 w-3" />,
+      label: "Pendiente",
+    },
+    VENCIDA: {
+      color: "bg-red-500/20 text-red-400 border-red-500/30",
+      icon: <AlertTriangle className="h-3 w-3" />,
+      label: "Vencida",
+    },
+    ANULADA: {
+      color: "bg-red-500/20 text-red-400 border-red-500/30",
+      icon: <AlertCircle className="h-3 w-3" />,
+      label: "Anulada",
+    },
+    DESCONOCIDO: {
+      color: "bg-slate-500/20 text-slate-400 border-slate-500/30",
+      icon: <AlertCircle className="h-3 w-3" />,
+      label: "Sin Factura",
+    },
+  }
+  return configs[estado || "PENDIENTE"] || configs.PENDIENTE
 }

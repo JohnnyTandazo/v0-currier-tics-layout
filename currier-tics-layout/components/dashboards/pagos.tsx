@@ -340,6 +340,9 @@ export function Pagos() {
   // Calcular totales usando SOLO datos filtrados del usuario
   const totalPendiente = facturasPendientes.reduce((acc, f) => acc + (f.monto || 0), 0)
   const totalPagado = pagosRecientes.reduce((acc, p) => acc + (p.monto || 0), 0)
+  const totalVerificado = pagosRecientes
+    .filter((p) => p.estado === "VERIFICADO")
+    .reduce((acc, p) => acc + (p.monto || 0), 0)
 
   // Estado de carga
   if (loading) {
@@ -417,9 +420,7 @@ export function Pagos() {
                 <CheckCircle className="h-5 w-5 text-emerald-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
-                  {pagosRecientes.filter((p) => p.estado === "VERIFICADO").length}
-                </p>
+                <p className="text-2xl font-bold">${totalVerificado.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Pagos Verificados</p>
               </div>
             </div>
