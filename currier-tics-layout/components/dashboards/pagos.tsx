@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
   Upload,
   CreditCard,
@@ -49,9 +50,15 @@ interface FacturaPendiente {
   numeroFactura: string | null
   monto: number
   estado?: string
+  descripcion?: string
   fechaVencimiento: string
   usuarioId?: number
   usuario?: { id: number }
+  envio?: {
+    id: number
+    trackingNumber: string
+    descripcion: string
+  }
 }
 
 interface PagoReciente {
@@ -76,6 +83,7 @@ interface FormData {
 }
 
 export function Pagos() {
+  const router = useRouter()
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [loading, setLoading] = useState(true)
   const [facturasPendientes, setFacturasPendientes] = useState<FacturaPendiente[]>([])
@@ -220,7 +228,21 @@ export function Pagos() {
   const handleSubmitPago = () => {
     console.log("Registrando pago:", formData)
     setSubmitSuccess(true)
-    setTimeout(() => setSubmitSuccess(false), 3000)
+    
+    // Refresh data after successful payment submission
+    setTimeout(() => {
+      router.refresh()
+      setSubmitSuccess(false)
+      // Reset form
+      setFormData({
+        facturaId: "",
+        monto: "",
+        metodoPago: "",
+        referencia: "",
+        notas: "",
+        comprobante: null,
+      })
+    }, 2000)
   }
 
   const getStatusConfig = (estado: string) => {
@@ -385,11 +407,26 @@ export function Pagos() {
                       <SelectValue placeholder="Selecciona una factura pendiente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {facturasPendientes.map((factura) => (
-                        <SelectItem key={factura.id} value={factura.id.toString()}>
-                          Factura #{factura.numeroFactura || factura.id} - ${(factura.monto || 0).toFixed(2)}
-                        </SelectItem>
-                      ))}
+                      {facturasPendientes.map((factura) => {
+                        // Build descriptive label for factura
+                        let label = ""
+                        if (factura.envio) {
+                          // Show shipment details if available
+                          label = `Envío #${factura.envio.trackingNumber} (${factura.envio.descripcion}) - Costo de Envío: $${(factura.monto || 0).toFixed(2)}`
+                        } else if (factura.descripcion) {
+                          // Fallback to descripcion if no envio
+                          label = `${factura.descripcion} - $${(factura.monto || 0).toFixed(2)}`
+                        } else {
+                          // Fallback to basic display
+                          label = `Factura #${factura.numeroFactura || factura.id} - $${(factura.monto || 0).toFixed(2)}`
+                        }
+                        
+                        return (
+                          <SelectItem key={factura.id} value={factura.id.toString()}>
+                            {label}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 )}
