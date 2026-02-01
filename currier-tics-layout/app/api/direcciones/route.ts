@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await fetch(
+    console.log("📥 Buscando direcciones para usuarioId:", usuarioId);
+
+    const resJava = await fetch(
       `${backendUrl}/api/direcciones?usuarioId=${encodeURIComponent(usuarioId)}`,
       {
         method: "GET",
@@ -24,19 +26,22 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    if (!response.ok) {
+    if (!resJava.ok) {
+      const errorText = await resJava.text();
+      console.error("🔥 ERROR DE JAVA (GET):", resJava.status, errorText);
       return NextResponse.json(
-        { error: `Backend error: ${response.statusText}` },
-        { status: response.status }
+        { error: errorText || `Backend error: ${resJava.statusText}` },
+        { status: resJava.status }
       );
     }
 
-    const data = await response.json();
+    const data = await resJava.json();
+    console.log("✅ Direcciones obtenidas:", JSON.stringify(data));
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error fetching direcciones:", error);
+    console.error("🚨 Error fetching direcciones:", error);
     return NextResponse.json(
-      { error: "Error al obtener direcciones" },
+      { error: "Error al obtener direcciones", details: String(error) },
       { status: 500 }
     );
   }
@@ -53,7 +58,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${backendUrl}/api/direcciones`, {
+    console.log("📤 Enviando a Java:", JSON.stringify(body));
+
+    const resJava = await fetch(`${backendUrl}/api/direcciones`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -61,19 +68,22 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    if (!response.ok) {
+    if (!resJava.ok) {
+      const errorText = await resJava.text();
+      console.error("🔥 ERROR DE JAVA:", resJava.status, errorText);
       return NextResponse.json(
-        { error: `Backend error: ${response.statusText}` },
-        { status: response.status }
+        { error: errorText || `Backend error: ${resJava.statusText}` },
+        { status: resJava.status }
       );
     }
 
-    const data = await response.json();
+    const data = await resJava.json();
+    console.log("✅ Respuesta de Java:", JSON.stringify(data));
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
-    console.error("Error creating dirección:", error);
+    console.error("🚨 Error creating dirección:", error);
     return NextResponse.json(
-      { error: "Error al crear dirección" },
+      { error: "Error al crear dirección", details: String(error) },
       { status: 500 }
     );
   }
