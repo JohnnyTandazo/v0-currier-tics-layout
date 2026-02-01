@@ -214,8 +214,8 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           // CRÍTICO: Validar que siempre haya un ID válido
           const finalId = p.id || p.idEnvio || p.id_envio || p.paqueteId || p.id_paquete || p.numeroGuia || p.numero_guia || p.referencia || p.reference
           
-          // CRÍTICO: El backend usa "trackingNumber" como campo principal
-          const realTrackingId = p.trackingNumber || p.numeroTracking || p.numero_tracking || p.trackingId || p.tracking || p.numeroGuia || p.numero_guia
+          // CRÍTICO: El backend usa "numeroTracking" como campo principal (según Spring Boot)
+          const realTrackingId = p.numeroTracking || p.numero_tracking || p.trackingNumber || p.trackingId || p.tracking || p.numeroGuia || p.numero_guia
           
           if (!finalId) {
             console.error("⚠️ [MAPEO] Objeto en índice", index, "NO TIENE ningún campo de ID:")
@@ -229,15 +229,15 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           
           const envioNormalizado = {
             // CRÍTICO: Usar el ID real del backend, NUNCA el índice
-            id: finalId || undefined, // Si no hay ID, lo dejamos undefined para detectarlo fácilmente
+            id: finalId || undefined,
             trackingId: realTrackingId || `PKG-${index}`,
-            fecha: p.fecha || p.fechaCreacion || p.createdAt || new Date().toISOString(),
+            fecha: p.fechaCreacion || p.fecha || p.createdAt || new Date().toISOString(),
             destinatario: p.destinatario || p.recipient || p.nombre_destinatario || "SIN-DESTINATARIO",
             direccion: p.direccion || p.address || p.direccion_envio || "SIN-DIRECCIÓN",
             estado: p.estado || p.status || "PROCESANDO",
-            peso: p.peso || p.weight || 0,
+            peso: p.pesoLibras || p.peso || p.weight || 0,
             descripcion: p.descripcion || p.description || "SIN-DESCRIPCIÓN",
-            usuarioId: p.usuarioId || p.usuario?.id || p.id_usuario || p.usuario_id || usuarioStored.id,
+            usuarioId: p.usuario?.id || p.usuarioId || p.id_usuario || p.usuario_id || usuarioStored.id,
           }
 
           console.log(`✅ [MAPEO ${index}] ID: ${envioNormalizado.id} | trackingId: "${envioNormalizado.trackingId}"`)
