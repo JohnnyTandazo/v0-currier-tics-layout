@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Printer, Package, Truck, Loader2, FileText, AlertCircle } from "lucide-react"
 import { PDFDownloadLink } from "@react-pdf/renderer"
-import { ShippingLabel } from "@/components/pdf/shipping-label"
+import ShippingLabel from "@/components/pdf/shipping-label"
 
 // Función segura para extraer ID del localStorage
 const getSafeUserId = (): number | null => {
@@ -106,13 +106,23 @@ export function Documentos() {
 
     const cargarEnvios = async () => {
       try {
-        const response = await fetch(`/api/envios?usuarioId=${userId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setEnvios(Array.isArray(data) ? data : [])
+        const response = await fetch(`/api/envios/usuario/${userId}`)
+        const text = await response.text()
+        
+        if (!text || text.trim() === "") {
+          setEnvios([])
+        } else {
+          try {
+            const data = JSON.parse(text)
+            setEnvios(Array.isArray(data) ? data : [])
+          } catch (parseError) {
+            console.error("❌ Error parsing JSON:", parseError)
+            setEnvios([])
+          }
         }
       } catch (error) {
-        console.error("Error cargando envíos:", error)
+        console.error("❌ Error cargando envíos:", error)
+        setEnvios([])
       } finally {
         setIsLoadingEnvios(false)
       }

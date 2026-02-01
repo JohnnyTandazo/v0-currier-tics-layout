@@ -24,21 +24,37 @@ export default function MisDocumentos() {
         const user = localStorage.getItem("usuario")
         if (user) {
           const { id } = JSON.parse(user)
-          const resEnvios = await fetch(`/api/envios?usuarioId=${id}`)
-          if (resEnvios.ok) {
-            const dataEnvios = await resEnvios.json()
-            setEnvios(Array.isArray(dataEnvios) ? dataEnvios : [])
+          try {
+            const resEnvios = await fetch(`/api/envios/usuario/${id}`)
+            const textEnvios = await resEnvios.text()
+            
+            if (!textEnvios || textEnvios.trim() === "") {
+              setEnvios([])
+            } else {
+              const dataEnvios = JSON.parse(textEnvios)
+              setEnvios(Array.isArray(dataEnvios) ? dataEnvios : [])
+            }
+          } catch (envioError) {
+            console.error("❌ Error fetching envios:", envioError)
+            setEnvios([])
           }
         }
 
         // Cargar Paquetes (Importaciones)
-        const resPaquetes = await fetch("/api/paquetes")
-        if (resPaquetes.ok) {
-          const dataPaquetes = await resPaquetes.json()
-          setPaquetes(Array.isArray(dataPaquetes) ? dataPaquetes : [])
+        try {
+          const resPaquetes = await fetch("/api/paquetes")
+          const textPaquetes = await resPaquetes.text()
+          
+          if (!textPaquetes || textPaquetes.trim() === "") {
+            setPaquetes([])
+          } else {
+            const dataPaquetes = JSON.parse(textPaquetes)
+            setPaquetes(Array.isArray(dataPaquetes) ? dataPaquetes : [])
+          }
+        } catch (paqueteError) {
+          console.error("❌ Error fetching paquetes:", paqueteError)
+          setPaquetes([])
         }
-      } catch (error) {
-        console.error("Error cargando datos:", error)
       } finally {
         setIsLoading(false)
       }

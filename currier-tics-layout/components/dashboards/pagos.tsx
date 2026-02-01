@@ -151,36 +151,41 @@ export function Pagos() {
           console.log("📊 Status response:", resFacturas.status, resFacturas.statusText)
           
           if (resFacturas.ok) {
-            const data = await resFacturas.json()
-            console.log("📦 Raw data from Backend:", data)
-            console.log("📦 Raw data type:", typeof data, "isArray:", Array.isArray(data))
+            const text = await resFacturas.text()
             
-            if (Array.isArray(data)) {
-              console.log("✅ Es array, elementos:", data.length)
-              data.forEach((f, idx) => {
-                console.log(`  [${idx}]`, {
-                  id: f.id,
-                  numeroFactura: f.numeroFactura,
-                  monto: f.monto,
-                  estado: f.estado,
-                  usuarioId: f.usuarioId
-                })
-              })
-              
-              // Filtrar solo las facturas pendientes (si el endpoint no lo hace)
-              const facturasPendientes = data.filter(
-                (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
-              )
-              console.log("✅ Facturas pendientes cargadas:", facturasPendientes.length, "de", data.length)
-              setFacturasPendientes(facturasPendientes)
-            } else {
-              console.warn("⚠️ Respuesta de facturas no es array:", data)
+            // ✅ Validar que no esté vacío
+            if (!text || text.trim() === "") {
+              console.warn("⚠️ Respuesta vacía del servidor")
               setFacturasPendientes([])
+            } else {
+              try {
+                const data = JSON.parse(text)
+                console.log("📦 Raw data from Backend:", data)
+                console.log("📦 Raw data type:", typeof data, "isArray:", Array.isArray(data))
+                
+                if (Array.isArray(data)) {
+                  console.log("✅ Es array, elementos:", data.length)
+                  
+                  // Filtrar solo las facturas pendientes (si el endpoint no lo hace)
+                  const facturasPendientes = data.filter(
+                    (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
+                  )
+                  console.log("✅ Facturas pendientes cargadas:", facturasPendientes.length, "de", data.length)
+                  setFacturasPendientes(facturasPendientes)
+                } else {
+                  console.warn("⚠️ Respuesta de facturas no es array:", data)
+                  setFacturasPendientes([])
+                }
+              } catch (parseErr) {
+                console.error("❌ Error parseando JSON:", parseErr)
+                console.error("📄 Texto recibido:", text.substring(0, 200))
+                setFacturasPendientes([])
+              }
             }
           } else {
             const errorText = await resFacturas.text()
             console.warn("⚠️ Error cargando facturas:", resFacturas.status, resFacturas.statusText)
-            console.warn("⚠️ Error body:", errorText)
+            console.warn("⚠️ Error body:", errorText.substring(0, 200))
             setFacturasPendientes([])
           }
         } catch (err) {
@@ -192,20 +197,34 @@ export function Pagos() {
         try {
           const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${usuario.id}`)
           if (resPagos.ok) {
-            const data = await resPagos.json()
-            if (Array.isArray(data)) {
-              console.log("✅ Pagos recientes cargados:", data.length)
-              // El backend ya filtra por usuarioId, pero hacemos validación adicional
-              const misPagos = data.filter(
-                (p: PagoReciente) => String(p.usuarioId) === String(usuario.id)
-              )
-              setPagosRecientes(misPagos)
-            } else {
-              console.warn("⚠️ Respuesta de pagos no es array:", data)
+            const text = await resPagos.text()
+            
+            if (!text || text.trim() === "") {
+              console.warn("⚠️ Respuesta de pagos vacía")
               setPagosRecientes([])
+            } else {
+              try {
+                const data = JSON.parse(text)
+                if (Array.isArray(data)) {
+                  console.log("✅ Pagos recientes cargados:", data.length)
+                  // El backend ya filtra por usuarioId, pero hacemos validación adicional
+                  const misPagos = data.filter(
+                    (p: PagoReciente) => String(p.usuarioId) === String(usuario.id)
+                  )
+                  setPagosRecientes(misPagos)
+                } else {
+                  console.warn("⚠️ Respuesta de pagos no es array:", data)
+                  setPagosRecientes([])
+                }
+              } catch (parseErr) {
+                console.error("❌ Error parseando pagos JSON:", parseErr)
+                setPagosRecientes([])
+              }
             }
           } else {
+            const errorText = await resPagos.text()
             console.warn("⚠️ Error cargando pagos:", resPagos.status, resPagos.statusText)
+            console.warn("⚠️ Error body:", errorText.substring(0, 200))
             setPagosRecientes([])
           }
         } catch (err) {

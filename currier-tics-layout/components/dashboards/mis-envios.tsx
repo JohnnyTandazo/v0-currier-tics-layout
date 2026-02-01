@@ -171,25 +171,36 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         
         setUsuario(usuarioStored)
         
-        const url = `/api/envios?usuarioId=${encodeURIComponent(String(usuarioStored.id))}`
+        const url = `/api/envios/usuario/${encodeURIComponent(String(usuarioStored.id))}`
         const facturasUrl = `/api/facturas/usuario/${encodeURIComponent(String(usuarioStored.id))}`
-        const [data, facturasData] = await Promise.all([safeFetch(url), safeFetch(facturasUrl)])
+        
+        let data: any[] = []
+        let facturaMap = new Map<string, string>()
+        
+        try {
+          const [fetchedData, facturasData] = await Promise.all([safeFetch(url), safeFetch(facturasUrl)])
 
-        // Verificar que data sea un array antes de filtrar
-        if (!Array.isArray(data)) {
-          console.error("❌ Datos no son array:", data)
+          // Verificar que data sea un array antes de filtrar
+          if (!Array.isArray(fetchedData)) {
+            console.error("❌ Datos no son array:", fetchedData)
+            setEnvios([])
+            return
+          }
+
+          data = fetchedData
+          const facturasArray = Array.isArray(facturasData) ? facturasData : []
+          facturaMap = new Map<string, string>()
+          facturasArray.forEach((f: any) => {
+            const envioId = f.envioId || f.envio?.id
+            if (envioId) {
+              facturaMap.set(String(envioId), f.estado || "PENDIENTE")
+            }
+          })
+        } catch (fetchErr) {
+          console.error("❌ Error fetching envios/facturas:", fetchErr)
           setEnvios([])
           return
         }
-
-        const facturasArray = Array.isArray(facturasData) ? facturasData : []
-        const facturaMap = new Map<string, string>()
-        facturasArray.forEach((f: any) => {
-          const envioId = f.envioId || f.envio?.id
-          if (envioId) {
-            facturaMap.set(String(envioId), f.estado || "PENDIENTE")
-          }
-        })
         
         // 🔥 LOG URGENTE: Ver estructura real de datos del backend
         console.log("🔥 DATOS RECIBIDOS DEL BACKEND - Primera instancia:")
