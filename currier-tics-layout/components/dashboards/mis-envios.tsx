@@ -70,27 +70,49 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
   const [loadingDetalles, setLoadingDetalles] = useState(false)
 
   // ✅ FUNCIÓN DEFENSIVA PARA CARGAR DETALLES
-  const handleVerDetalles = async (envioId: number) => {
+  const handleVerDetalles = async (envioId: number | string | undefined) => {
     try {
       setLoadingDetalles(true)
-      console.log("🔍 [Frontend] Cargando detalles del envío ID:", envioId)
+      
+      // ✅ VALIDACIÓN 1: Verificar que el ID sea válido
+      if (!envioId || envioId === "undefined" || envioId === "null") {
+        console.error("❌ [Frontend] ID inválido o vacío:", envioId)
+        alert("Error: ID de envío inválido")
+        setLoadingDetalles(false)
+        return
+      }
+
+      // ✅ VALIDACIÓN 2: Convertir a número si es string
+      const numericId = typeof envioId === "string" ? parseInt(envioId, 10) : envioId
+      
+      if (isNaN(numericId) || numericId <= 0) {
+        console.error("❌ [Frontend] ID no es un número válido:", envioId)
+        alert("Error: ID de envío debe ser un número válido")
+        setLoadingDetalles(false)
+        return
+      }
+
+      console.log("🔍 [Frontend] Cargando detalles del envío ID:", numericId)
+      console.log("📡 [Frontend] Llamando a: /api/envios/" + numericId)
 
       const { data, error, status } = await defensiveFetch<EnvioDetalles>(
-        `/api/envios/${envioId}`,
+        `/api/envios/${numericId}`,
         {
           method: "GET",
-          fallbackData: createFallbackEnvio(envioId),
+          fallbackData: createFallbackEnvio(numericId),
         }
       )
 
       if (error) {
-        console.error("❌ [Frontend] Error al cargar:", error)
-        alert(`Error: ${error}`)
+        console.error("❌ [Frontend] Error HTTP al cargar:", error)
+        console.error("📊 [Frontend] Status:", status)
+        console.error("🔗 [Frontend] URL llamada: /api/envios/" + numericId)
+        alert(`Error al cargar detalles: ${error}`)
         return
       }
 
       if (!data) {
-        console.warn("⚠️ [Frontend] No hay datos disponibles")
+        console.warn("⚠️ [Frontend] No hay datos disponibles para ID:", numericId)
         alert("No se pudieron cargar los detalles del envío.")
         return
       }
@@ -388,7 +410,10 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleVerDetalles(envio.id)}
+                          onClick={() => {
+                            console.log("🖱️ [Frontend] Click en Ver Detalles para ID:", envio.id, "tipo:", typeof envio.id)
+                            handleVerDetalles(envio.id)
+                          }}
                           disabled={loadingDetalles}
                           className="border-border/50 hover:bg-accent/50"
                         >
