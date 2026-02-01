@@ -102,13 +102,13 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         console.error("❌ [Frontend] Error al cargar detalles")
         console.error("❌ URL:", url)
         console.error("❌ Error:", error, "Status:", status)
-        alert(`Error al cargar detalles:\n\n${error}\n\nTracking: ${trackingId}`)
+        alert(`Error al cargar detalles:\n\n${error}\n\nID: ${envioId}`)
         setLoadingDetalles(false)
         return
       }
 
       if (!data) {
-        console.warn("⚠️ [Frontend] No hay datos para tracking:", trackingId)
+        console.warn("⚠️ [Frontend] No hay datos para ID:", envioId)
         alert("No se pudieron cargar los detalles del envío.")
         setLoadingDetalles(false)
         return
