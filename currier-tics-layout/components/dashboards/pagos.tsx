@@ -56,7 +56,8 @@ interface FacturaPendiente {
   usuario?: { id: number }
   envio?: {
     id: number
-    trackingNumber: string
+    numeroTracking?: string
+    trackingNumber?: string
     descripcion: string
   }
 }
@@ -225,24 +226,83 @@ export function Pagos() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmitPago = () => {
-    console.log("Registrando pago:", formData)
-    setSubmitSuccess(true)
-    
-    // Refresh data after successful payment submission
-    setTimeout(() => {
-      router.refresh()
-      setSubmitSuccess(false)
-      // Reset form
-      setFormData({
-        facturaId: "",
-        monto: "",
-        metodoPago: "",
-        referencia: "",
-        notas: "",
-        comprobante: null,
+  const handleSubmitPago = async () => {
+    try {
+      console.log("Registrando pago:", formData)
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl || !usuario) {
+        console.error("API URL no configurada o usuario no existe")
+        return
+      }
+
+      // Prepare FormData for file upload
+      const submitData = new FormData()
+      submitData.append("facturaId", formData.facturaId)
+      submitData.append("monto", formData.monto)
+      submitData.append("metodoPago", formData.metodoPago)
+      submitData.append("referencia", formData.referencia)
+      submitData.append("descripcion", formData.notas)
+      submitData.append("usuarioId", usuario.id.toString())
+      if (formData.comprobante) {
+        submitData.append("comprobante", formData.comprobante)
+      }
+
+      // Submit payment to API
+      const response = await fetch(`${apiUrl}/api/pagos`, {
+        method: "POST",
+        body: submitData,
       })
-    }, 2000)
+
+      if (response.ok) {
+        console.log("✅ Pago registrado exitosamente")
+        setSubmitSuccess(true)
+        
+        // Reset form
+        setFormData({
+          facturaId: "",
+          monto: "",
+          metodoPago: "",
+          referencia: "",
+          notas: "",
+          comprobante: null,
+        })
+
+        // Reload data from API
+        setTimeout(async () => {
+          // Refetch facturas pendientes
+          const resFacturas = await fetch(`${apiUrl}/api/facturas/usuario/${usuario.id}`)
+          if (resFacturas.ok) {
+            const data = await resFacturas.json()
+            if (Array.isArray(data)) {
+              const facturasPendientes = data.filter(
+                (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
+              )
+              setFacturasPendientes(facturasPendientes)
+            }
+          }
+
+          // Refetch pagos recientes
+          const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${usuario.id}`)
+          if (resPagos.ok) {
+            const data = await resPagos.json()
+            if (Array.isArray(data)) {
+              const misPagos = data.filter(
+                (p: PagoReciente) => String(p.usuarioId) === String(usuario.id)
+              )
+              setPagosRecientes(misPagos)
+            }
+          }
+
+          setSubmitSuccess(false)
+          router.refresh()
+        }, 1500)
+      } else {
+        console.error("❌ Error al registrar pago:", response.status)
+      }
+    } catch (err) {
+      console.error("❌ Error submitting pago:", err)
+    }
   }
 
   const getStatusConfig = (estado: string) => {
@@ -412,12 +472,24 @@ export function Pagos() {
                         let label = ""
                         if (factura.envio) {
                           // Show shipment details if available
-                          label = `Envío #${factura.envio.trackingNumber} (${factura.envio.descripcion}) - Costo de Envío: $${(factura.monto || 0).toFixed(2)}`
+                          const tracking = factura.envio.trackingNumber || factura.envio.numeroTracking || 'Pendiente'
+                          const desc = factura.envio.descripcion || 'Sin descripción'
+                          label = `Envío #${tracking} (${desc}) - Costo de Envío: $${(factura.monto || 0).toFixed(2)}`
                         } else if (factura.descripcion) {
                           // Fallback to descripcion if no envio
                           label = `${factura.descripcion} - $${(factura.monto || 0).toFixed(2)}`
                         } else {
                           // Fallback to basic display
+                          label = `Factura #${factura.numeroFactura || factura.id} - $${(factura.monto || 0).toFixed(2)}`
+                        }
+                        
+                        return (
+                          <SelectItem key={factura.id} value={factura.id.toString()}>
+                            {label}
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
                           label = `Factura #${factura.numeroFactura || factura.id} - $${(factura.monto || 0).toFixed(2)}`
                         }
                         
