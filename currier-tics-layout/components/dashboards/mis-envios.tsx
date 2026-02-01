@@ -166,21 +166,46 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         
         // Verificar que data sea un array antes de filtrar
         if (!Array.isArray(data)) {
+          console.error("❌ Datos no son array:", data)
           setEnvios([])
           return
+        }
+        
+        // 🔥 LOG URGENTE: Ver estructura real de datos del backend
+        console.log("🔥 DATOS RECIBIDOS DEL BACKEND - Primera instancia:")
+        if (data.length > 0) {
+          console.log("🔥 Estructura completa:", data[0])
+          console.log("🔥 Campos disponibles:", Object.keys(data[0]))
+          console.log("🔥 ID field:", data[0].id || data[0].idEnvio || data[0].id_envio || data[0].numeroGuia || "NO ENCONTRADO")
         }
         
         console.log("USUARIO LOGUEADO:", usuarioStored)
         console.log("DATOS RAW:", data.length, "registros")
 
+        // ✅ MAPEO DE CAMPOS: Normalizar estructura del backend
+        const normalizedEnvios = data.map((p: any) => ({
+          // Si el backend manda diferentes nombres, aquí hacemos el mapeo
+          id: p.id || p.idEnvio || p.id_envio || Math.random(), // CRÍTICO: Asegurar que hay ID
+          trackingId: p.trackingId || p.tracking || p.numeroGuia || p.numero_guia || p.trackingNumber || "SIN-ID",
+          fecha: p.fecha || p.fechaCreacion || p.createdAt || new Date().toISOString(),
+          destinatario: p.destinatario || p.recipient || p.nombre_destinatario || "SIN-DESTINATARIO",
+          direccion: p.direccion || p.address || p.direccion_envio || "SIN-DIRECCIÓN",
+          estado: p.estado || p.status || "PROCESANDO",
+          peso: p.peso || p.weight || 0,
+          descripcion: p.descripcion || p.description || "SIN-DESCRIPCIÓN",
+          usuarioId: p.usuarioId || p.usuario?.id || p.id_usuario || p.usuario_id || usuarioStored.id,
+        }))
+
+        console.log("✅ ENVÍOS NORMALIZADOS (primero):", normalizedEnvios[0])
+
         // FILTRADO ESTRICTO por usuario
-        const misEnvios = data.filter((p: any) => {
-          const packUserId = p.usuarioId || p.usuario?.id || p.id_usuario
+        const misEnvios = normalizedEnvios.filter((p: Envio) => {
           const myUserId = usuarioStored.id
-          return String(packUserId) === String(myUserId)
+          return String(p.usuarioId) === String(myUserId)
         })
 
         console.log("ENVÍOS FILTRADOS:", misEnvios.length, "registros")
+        console.log("🔥 PRIMER ENVÍO DESPUÉS DE NORMALIZAR:", misEnvios[0])
         setEnvios(misEnvios)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error")
@@ -381,7 +406,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                   return (
                     <TableRow key={envio.id} className="border-border/50">
                       <TableCell className="font-mono text-sm text-foreground">
-                        {envio.trackingId}
+                        {envio.trackingId || `[ID:${envio.id}]` || "[VACÍO]"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatearFecha(envio.fecha)}
