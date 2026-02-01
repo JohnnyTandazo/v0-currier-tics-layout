@@ -98,7 +98,12 @@ export default function MisDocumentos() {
                         <TableCell className="font-bold font-mono">
                           {env.numeroTracking}
                         </TableCell>
-                        <TableCell>{env.ciudad || "N/A"}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{env.destinatarioCiudad || env.ciudad || "Sin ciudad"}</p>
+                            <p className="text-xs text-muted-foreground">{env.destinatarioNombre || "Sin nombre"}</p>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">{env.estado}</Badge>
                         </TableCell>
