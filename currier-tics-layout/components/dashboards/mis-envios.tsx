@@ -94,7 +94,7 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         url,
         {
           method: "GET",
-          fallbackData: createFallbackEnvio(trackingId),
+          fallbackData: createFallbackEnvio(envioId),
         }
       )
 
