@@ -249,24 +249,26 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
       return
     }
 
+    // Generar un tracking temporal si no lo tengo
+    const trackingId = `NAC-${Date.now().toString().slice(-6)}`
+
     setIsSaving(true)
     try {
+      // Payload EXACTO según contrato Backend
       const payload = {
         usuarioId: cleanUserId,
-        tipo: "ENVIO",
-        estado: "RECOLECCION_PENDIENTE",
-        direccionOrigenId: data.direccionOrigenId,
-        cedulaDestinatario: data.cedulaDestinatario,
-        nombreDestinatario: data.nombreDestinatario,
-        telefonoDestinatario: data.telefonoDestinatario,
-        ciudadDestino: data.ciudadDestino,
-        direccionDestino: data.direccionDestino,
+        numeroTracking: trackingId,
         descripcion: data.descripcion,
         pesoLibras: Number(data.peso),
         valorDeclarado: Number(data.valorDeclarado),
+        estado: "PENDIENTE",
+        categoria: "A",
+        usuario: {
+          id: cleanUserId,
+        },
       }
 
-      console.log("📤 Payload LIMPIO enviado a POST /api/envios:", payload)
+      console.log("📤 Payload EXACTO según contrato Backend:", JSON.stringify(payload, null, 2))
 
       const response = await fetch("/api/envios", {
         method: "POST",
@@ -281,11 +283,11 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
       }
 
       const responseData = await response.json()
-      console.log("✅ Envío creado:", responseData)
+      console.log("✅ Envío creado con tracking:", trackingId, responseData)
 
       toast({
         title: "✅ Solicitud creada",
-        description: `Guía generada correctamente.`,
+        description: `Guía generada: ${trackingId}`,
       })
 
       onSuccess?.()
