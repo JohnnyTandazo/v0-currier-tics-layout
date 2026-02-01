@@ -70,19 +70,19 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
   const [loadingDetalles, setLoadingDetalles] = useState(false)
 
   // ✅ FUNCIÓN DEFENSIVA PARA CARGAR DETALLES
-  const handleVerDetalles = async (trackingCode: number | string | undefined) => {
+  const handleVerDetalles = async (envioId: number | undefined) => {
     try {
       setLoadingDetalles(true)
       
-      // ✅ VALIDACIÓN 1: Verificar que el trackingCode sea válido
-      if (!trackingCode || trackingCode === "undefined" || trackingCode === "null") {
-        console.error("❌ [Frontend] Tracking code inválido o vacío:", trackingCode)
-        alert("Error: Código de rastreo inválido")
+      // ✅ VALIDACIÓN 1: Verificar que el ID sea válido
+      if (!envioId) {
+        console.error("❌ [Frontend] ID de envío inválido o vacío:", envioId)
+        alert("Error: ID de envío inválido")
         setLoadingDetalles(false)
         return
       }
 
-      // ✅ USAR TRACKING CODE (convertir a string si es número)
+      // ✅ USAR ID NUMÉRICO del backend
       const trackingId = String(trackingCode).trim()
       
       if (!trackingId || trackingId.length === 0) {
@@ -499,8 +499,8 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                             console.log("  ├─ envio.trackingId:", envio.trackingId, "tipo:", typeof envio.trackingId)
                             console.log("  ├─ envio.id (ID numérico interno):", envio.id)
                             console.log("  └─ objeto completo:", envio)
-                            // ✅ Usar trackingId en lugar de ID numérico
-                            handleVerDetalles(envio.trackingId)
+                            // ✅ Usar ID numérico del backend (NO trackingId)
+                            handleVerDetalles(envio.id)
                           }}
                           disabled={loadingDetalles}
                           className="border-border/50 hover:bg-accent/50"
