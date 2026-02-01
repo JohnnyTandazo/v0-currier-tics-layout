@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+console.log("🌍 Conectando a Backend:", `${BACKEND_URL}/api/direcciones/{id}`);
 
 export async function DELETE(
   request: NextRequest,
@@ -16,7 +18,7 @@ export async function DELETE(
       );
     }
 
-    const response = await fetch(`${backendUrl}/api/direcciones/${id}`, {
+    const response = await fetch(`${BACKEND_URL}/api/direcciones/${id}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -58,7 +60,7 @@ export async function PUT(
       );
     }
 
-    const response = await fetch(`${backendUrl}/api/direcciones/${id}`, {
+    const response = await fetch(`${BACKEND_URL}/api/direcciones/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
