@@ -83,20 +83,11 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
       }
 
       // ✅ USAR ID NUMÉRICO del backend
-      const trackingId = String(trackingCode).trim()
-      
-      if (!trackingId || trackingId.length === 0) {
-        console.error("❌ [Frontend] Tracking code vacío:", trackingCode)
-        alert("Error: Código de rastreo vacío")
-        setLoadingDetalles(false)
-        return
-      }
+      console.log("🔍 [Frontend] Cargando detalles del envío - ID:", envioId)
+      console.log("📡 [Frontend] ID - Tipo:", typeof envioId, "Valor:", envioId)
 
-      console.log("🔍 [Frontend] Cargando detalles del envío - Tracking:", trackingId)
-      console.log("📡 [Frontend] Tracking Code - Tipo:", typeof trackingId, "Valor:", trackingId)
-
-      // ✅ LLAMAR AL ENDPOINT POR TRACKING CODE
-      const url = `/api/envios/${trackingId}`
+      // ✅ LLAMAR AL ENDPOINT POR ID NUMÉRICO
+      const url = `/api/envios/${envioId}`
       console.log("📡 [Frontend] URL endpoint:", url)
 
       const { data, error, status } = await defensiveFetch<EnvioDetalles>(
