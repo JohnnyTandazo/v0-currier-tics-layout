@@ -170,8 +170,8 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         }
 
         // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
-        const cleanId = String(usuarioStored.id).split(':')[0].trim()
-        console.log("🛠️ Limpiando ID corrupto:", usuarioStored.id, "-> ID Final:", cleanId)
+        const cleanId = usuario.id.toString().split(':')[0].trim()
+        console.log("🛠️ Limpiando ID corrupto:", usuario.id, "-> ID Final:", cleanId)
         
         // ✅ VALIDAR que el ID sea un número válido
         if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
@@ -217,10 +217,18 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           facturasArray.forEach((f: any) => {
             const envioId = f.envioId || f.envio?.id
             if (envioId) {
-              facturaMap.set(String(envioId), f.estado || "PENDIENTE")
+              // ✅ NORMALIZAR estado: PAGADO → PAGADA para consistencia con frontend
+              const estadoFactura = (f.estado || "PENDIENTE").toUpperCase()
+              const estadoNormalizado = estadoFactura === "PAGADO" ? "PAGADA" : estadoFactura
+              facturaMap.set(String(envioId), estadoNormalizado)
             }
           })
           console.log(`✅ Facturas mapeadas: ${facturaMap.size}`)
+          // 🔥 LOG: Mostrar mapeo de facturas para debugging
+          console.log("🔥 MAPA DE FACTURAS (envioId -> estado):")
+          facturaMap.forEach((estado, envioId) => {
+            console.log(`    Envío ID ${envioId}: ${estado}`)
+          })
         } catch (fetchErr) {
           console.error("❌ Error fetching envios/facturas:", fetchErr)
           setError(`Error cargando datos: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`)
@@ -659,6 +667,12 @@ const getPagoStatusConfig = (estado?: string) => {
       color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
       icon: <CheckCircle className="h-3 w-3" />,
       label: "Pagada",
+    },
+    PAGADO: {
+      // ✅ Soporte para PAGADO (del backend) además de PAGADA
+      color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      icon: <CheckCircle className="h-3 w-3" />,
+      label: "Pagado",
     },
     PENDIENTE: {
       color: "bg-amber-500/20 text-amber-400 border-amber-500/30",

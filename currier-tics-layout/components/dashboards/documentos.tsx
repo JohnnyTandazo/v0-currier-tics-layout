@@ -83,7 +83,7 @@ export function Documentos() {
     const cargarPaquetes = async () => {
       try {
         // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
-        const cleanId = String(userId).split(':')[0].trim()
+        const cleanId = userId.toString().split(':')[0].trim()
         console.log("🛠️ Limpiando ID corrupto:", userId, "-> ID Final:", cleanId)
         
         if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {

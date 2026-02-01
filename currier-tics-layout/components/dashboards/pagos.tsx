@@ -134,7 +134,7 @@ export function Pagos() {
     const fetchData = async () => {
       try {
         // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
-        const cleanId = String(usuario.id).split(':')[0].trim()
+        const cleanId = usuario.id.toString().split(':')[0].trim()
         console.log("🛠️ Limpiando ID corrupto:", usuario.id, "-> ID Final:", cleanId)
         
         // ✅ VALIDAR que el ID sea un número válido
@@ -219,8 +219,9 @@ export function Pagos() {
                   console.log("✅ Pagos recientes cargados:", data.length)
                   // El backend ya filtra por usuarioId, pero hacemos validación adicional
                   const misPagos = data.filter(
-                    (p: PagoReciente) => String(p.usuarioId) === String(usuario.id)
+                    (p: PagoReciente) => String(p.usuarioId) === String(cleanId)
                   )
+                  console.log("✅ Pagos filtrados:", misPagos.length)
                   setPagosRecientes(misPagos)
                 } else {
                   console.warn("⚠️ Respuesta de pagos no es array:", data)
@@ -228,6 +229,10 @@ export function Pagos() {
                 }
               } catch (parseErr) {
                 console.error("❌ Error parseando pagos JSON:", parseErr)
+                console.error("📄 Respuesta recibida (primeros 500 chars):", text.substring(0, 500))
+                if (text.includes("<")) {
+                  console.error("❌ Parece ser HTML error del servidor, no JSON válido")
+                }
                 setPagosRecientes([])
               }
             }
@@ -306,27 +311,44 @@ export function Pagos() {
 
         // Reload data from API
         setTimeout(async () => {
+          // ✅ USAR ID LIMPIO EN REFETCH
+          const cleanId = usuario.id.toString().split(':')[0].trim()
+          
           // Refetch facturas pendientes
-          const resFacturas = await fetch(`${apiUrl}/api/facturas/usuario/${usuario.id}`)
+          const resFacturas = await fetch(`${apiUrl}/api/facturas/usuario/${cleanId}`)
           if (resFacturas.ok) {
-            const data = await resFacturas.json()
-            if (Array.isArray(data)) {
-              const facturasPendientes = data.filter(
-                (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
-              )
-              setFacturasPendientes(facturasPendientes)
+            const text = await resFacturas.text()
+            if (text && text.trim() !== "" && !text.includes("<")) {
+              try {
+                const data = JSON.parse(text)
+                if (Array.isArray(data)) {
+                  const facturasPendientes = data.filter(
+                    (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
+                  )
+                  setFacturasPendientes(facturasPendientes)
+                }
+              } catch (err) {
+                console.error("❌ Error parseando facturas en refetch:", err)
+              }
             }
           }
 
           // Refetch pagos recientes
-          const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${usuario.id}`)
+          const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${cleanId}`)
           if (resPagos.ok) {
-            const data = await resPagos.json()
-            if (Array.isArray(data)) {
-              const misPagos = data.filter(
-                (p: PagoReciente) => String(p.usuarioId) === String(usuario.id)
-              )
-              setPagosRecientes(misPagos)
+            const text = await resPagos.text()
+            if (text && text.trim() !== "" && !text.includes("<")) {
+              try {
+                const data = JSON.parse(text)
+                if (Array.isArray(data)) {
+                  const misPagos = data.filter(
+                    (p: PagoReciente) => String(p.usuarioId) === String(cleanId)
+                  )
+                  setPagosRecientes(misPagos)
+                }
+              } catch (err) {
+                console.error("❌ Error parseando pagos en refetch:", err)
+              }
             }
           }
 

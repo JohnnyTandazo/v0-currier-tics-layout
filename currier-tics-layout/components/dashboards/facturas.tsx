@@ -198,7 +198,9 @@ export function Facturas() {
 
     try {
       setLoading(true);
-      console.log("🔄 Cargando paquetes para usuario:", usuario.id);
+      // ✅ LIMPIAR ID CORRUPTO
+      const cleanId = usuario.id.toString().split(':')[0].trim()
+      console.log("🔄 Cargando paquetes para usuario - ID limpio:", cleanId);
       
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!apiUrl) {
@@ -209,10 +211,10 @@ export function Facturas() {
       console.log("📦 Datos recibidos del backend:", data);
 
       if (Array.isArray(data)) {
-        // FILTRADO ESTRICTO: Solo paquetes del usuario actual
+        // FILTRADO ESTRICTO: Solo paquetes del usuario actual con ID limpio
         const misPaquetes = data.filter(
           (p: Paquete) =>
-            String(p.usuarioId || p.usuario?.id) === String(usuario.id)
+            String(p.usuarioId || p.usuario?.id) === String(cleanId)
         );
 
         console.log("👤 Paquetes del usuario:", misPaquetes);

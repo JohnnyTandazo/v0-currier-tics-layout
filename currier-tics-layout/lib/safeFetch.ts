@@ -30,12 +30,25 @@ export async function safeFetch(url: string, options?: RequestInit): Promise<any
     
     // Intentar parsear JSON
     try {
+      // ✅ VALIDAR QUE NO SEA HTML antes de parsear
+      if (text.trim().startsWith('<') || text.includes('<!DOCTYPE') || text.includes('<html')) {
+        console.error("❌ El servidor retornó HTML en lugar de JSON");
+        console.error("📄 Contenido HTML recibido:", text.substring(0, 500));
+        throw new Error(`El servidor retornó HTML en lugar de JSON. Status: ${response.status}`);
+      }
+      
       const data = JSON.parse(text);
       console.log(`✅ JSON parseado exitosamente de ${url}`);
       return data;
     } catch (parseError) {
       console.error("❌ Error parseando JSON:", parseError);
       console.error("📄 Texto recibido:", text.substring(0, 500));
+      
+      // ✅ MENSAJE MÁS CLARO si es HTML
+      if (text.trim().startsWith('<')) {
+        throw new Error(`El servidor retornó HTML en lugar de JSON (posible error CORS o página de error)`);
+      }
+      
       throw new Error(`JSON parse error: ${text.substring(0, 100)}`);
     }
   } catch (error) {

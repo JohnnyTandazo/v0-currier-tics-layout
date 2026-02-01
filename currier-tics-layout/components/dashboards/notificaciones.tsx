@@ -99,6 +99,8 @@ export function Notificaciones() {
     const fetchNotificaciones = async () => {
       try {
         setLoading(true)
+        // ✅ LIMPIAR ID CORRUPTO
+        const cleanId = usuario.id.toString().split(':')[0].trim()
         const apiUrl = process.env.NEXT_PUBLIC_API_URL
         if (!apiUrl) {
           setNotificaciones([])
@@ -112,9 +114,9 @@ export function Notificaciones() {
           const data = await response.json()
           
           if (Array.isArray(data)) {
-            // FILTRADO ESTRICTO por usuario
+            // FILTRADO ESTRICTO por usuario con ID limpio
             const misNotificaciones = data.filter(
-              (n: any) => String(n.usuarioId || n.usuario?.id) === String(usuario.id)
+              (n: any) => String(n.usuarioId || n.usuario?.id) === String(cleanId)
             )
             setNotificaciones(misNotificaciones)
           } else {

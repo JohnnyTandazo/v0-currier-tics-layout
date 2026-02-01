@@ -75,7 +75,9 @@ export function PreAlertModal({ open, onOpenChange }: PreAlertModalProps) {
 
       // Get user from localStorage
       const usuario = JSON.parse(localStorage.getItem("usuario") || "{}");
-      const usuarioId = usuario.id || 1;
+      // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
+      const cleanId = usuario.id ? usuario.id.toString().split(':')[0].trim() : "1"
+      const usuarioId = cleanId || 1;
 
       // Generate tracking number if not provided
       const generatedTrackingNumber = `TRK-${new Date()
@@ -92,7 +94,7 @@ export function PreAlertModal({ open, onOpenChange }: PreAlertModalProps) {
           storeName: storeName === "otra" ? customStore : storeName,
           descripcion: description,
           precio: price,
-          usuarioId: usuarioId,
+          usuarioId: Number(usuarioId),
           tipo_envio: tipoEnvio, // Include tipo_envio
           estado: "PRE_ALERTA", // Default estado
         }),
