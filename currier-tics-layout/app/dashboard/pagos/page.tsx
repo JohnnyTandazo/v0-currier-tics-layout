@@ -1,10 +1,11 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { Pagos } from "@/components/dashboards/pagos";
 
 /**
- * PÁGINA DE REDIRECCIÓN
- * Esta página redirige automáticamente a /dashboard/facturas
- * ya que "Facturas y Pagos" ahora es el historial unificado
+ * Página de Pagos
+ * Permite registrar nuevos pagos y ver el historial de pagos recientes
  */
 export default function PagosPage() {
-  redirect("/dashboard/facturas");
+  return <Pagos />;
 }

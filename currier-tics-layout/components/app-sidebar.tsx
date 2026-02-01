@@ -53,7 +53,8 @@ const clientNavItems = [
   { title: "Panel Principal", icon: Home, badge: null },
   { title: "Mis Paquetes", icon: Package, badge: "12" },
   { title: "Envíos", icon: Truck, badge: "3" },
-  { title: "Facturas y Pagos", icon: FileText, badge: null },
+  { title: "Pagos", icon: DollarSign, badge: null },
+  { title: "Facturas", icon: FileText, badge: null },
 ]
 
 const operatorNavItems = [
@@ -97,7 +98,10 @@ export function AppSidebar({ user, currentRole, currentClientView, onRoleChange,
         case "Envíos":
           onClientViewChange("envios")
           break
-        case "Facturas y Pagos":
+        case "Pagos":
+          onClientViewChange("pagos")
+          break
+        case "Facturas":
           onClientViewChange("facturas")
           break
         case "Notificaciones":
@@ -116,7 +120,9 @@ export function AppSidebar({ user, currentRole, currentClientView, onRoleChange,
         return "dashboard"
       case "Envíos":
         return "envios"
-      case "Facturas y Pagos":
+      case "Pagos":
+        return "pagos"
+      case "Facturas":
         return "facturas"
       case "Notificaciones":
         return "notificaciones"
