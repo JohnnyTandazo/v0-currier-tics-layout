@@ -1,16 +1,16 @@
 "use client";
 
 import { Suspense } from "react";
-import { Facturas } from "@/components/dashboards/facturas";
+import { Documentos } from "@/components/dashboards/documentos";
 
 /**
- * Página de Facturas y Pagos (Historial Unificado)
- * Muestra el historial financiero completo del usuario
+ * Página de Documentos (Centro de Documentos)
+ * Muestra importaciones y envíos nacionales con gestión de guías PDF
  */
 export default function FacturasPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-screen">Cargando sistema de facturación...</div>}>
-      <Facturas />
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">Cargando centro de documentos...</div>}>
+      <Documentos />
     </Suspense>
   );
 }
