@@ -53,11 +53,15 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
 
         const usuarioId = usuario.id
 
-        if (!usuarioId) {
-          throw new Error("Usuario no autenticado")
+        // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
+        const cleanId = String(usuarioId).split(':')[0].trim()
+        console.log("🛠️ Limpiando ID corrupto:", usuarioId, "-> ID Final:", cleanId)
+
+        if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
+          throw new Error("ID de usuario inválido después de limpiar")
         }
 
-        const url = `/api/paquetes?usuarioId=${encodeURIComponent(String(usuarioId))}`
+        const url = `/api/paquetes?usuarioId=${cleanId}`
         console.log("Obteniendo paquetes del usuario:", url)
 
         const data = await safeFetch(url)

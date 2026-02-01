@@ -167,10 +167,18 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
     }
 
     const cargarDirecciones = async () => {
-      console.log("⚡ Wizard: Fetching direcciones (SOLO UNA VEZ) para ID:", userId)
+      console.log("⚡ Wizard: Fetching direcciones para ID:", userId)
       setIsLoadingDirecciones(true)
       try {
-        const url = `/api/direcciones?usuarioId=${userId}`
+        // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
+        const cleanId = String(userId).split(':')[0].trim()
+        console.log("🛠️ Limpiando ID corrupto:", userId, "-> ID Final:", cleanId)
+        
+        if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
+          throw new Error("ID de usuario inválido después de limpiar")
+        }
+        
+        const url = `/api/direcciones?usuarioId=${cleanId}`
         console.log("📥 GET:", url)
 
         const response = await fetch(url, {

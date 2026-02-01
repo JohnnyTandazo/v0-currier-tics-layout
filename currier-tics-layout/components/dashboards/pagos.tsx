@@ -133,10 +133,9 @@ export function Pagos() {
 
     const fetchData = async () => {
       try {
-        // ✅ LIMPIAR ID: Extraer solo números (remove :1 suffix)
-        const cleanId = String(usuario.id).replace(/[^0-9]/g, '')
-        console.log(`📝 ID original: ${usuario.id} | ID limpio: ${cleanId}`)
-        console.log("Solicitando datos para ID limpio:", cleanId)
+        // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
+        const cleanId = String(usuario.id).split(':')[0].trim()
+        console.log("🛠️ Limpiando ID corrupto:", usuario.id, "-> ID Final:", cleanId)
         
         // ✅ VALIDAR que el ID sea un número válido
         if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
@@ -145,21 +144,15 @@ export function Pagos() {
           return
         }
         
-        console.log(`✅ Usuario autenticado: ID numérico puro: ${cleanId}`)
+        console.log(`✅ Usuario autenticado: ID limpio verificado: ${cleanId}`)
         
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
         console.log("🌐 API URL base:", apiUrl)
-        if (!apiUrl) {
-          console.error("❌ API URL no configurada")
-          setLoading(false)
-          return
-        }
 
         // Fetch facturas pendientes
         try {
-          console.log("🔄 Fetching facturas para usuario.id:", cleanId)
           const urlFacturas = `${apiUrl}/api/facturas/usuario/${cleanId}`
-          console.log("📍 URL final facturas:", urlFacturas)
+          console.log("📍 URL FINAL FACTURAS:", urlFacturas)
           console.log("📍 URL completa:", urlFacturas)
           
           const resFacturas = await fetch(urlFacturas)
@@ -211,7 +204,7 @@ export function Pagos() {
         // Fetch pagos recientes
         try {
           const urlPagos = `${apiUrl}/api/pagos?usuarioId=${cleanId}`
-          console.log("📍 URL final pagos:", urlPagos)
+          console.log("📍 URL FINAL PAGOS:", urlPagos)
           const resPagos = await fetch(urlPagos)
           if (resPagos.ok) {
             const text = await resPagos.text()

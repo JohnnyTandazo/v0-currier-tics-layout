@@ -169,10 +169,9 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           return
         }
 
-        // ✅ LIMPIAR ID: Extraer solo números (remove :1 suffix)
-        const cleanId = String(usuarioStored.id).replace(/[^0-9]/g, '')
-        console.log(`📝 ID original: ${usuarioStored.id} | ID limpio: ${cleanId}`)
-        console.log("Solicitando datos para ID limpio:", cleanId)
+        // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
+        const cleanId = String(usuarioStored.id).split(':')[0].trim()
+        console.log("🛠️ Limpiando ID corrupto:", usuarioStored.id, "-> ID Final:", cleanId)
         
         // ✅ VALIDAR que el ID sea un número válido
         if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
@@ -184,19 +183,17 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           return
         }
         
-        console.log(`✅ Usuario autenticado: ID numérico puro: ${cleanId}`)
+        console.log(`✅ Usuario autenticado: ID limpio verificado: ${cleanId}`)
         
         setUsuario(usuarioStored)
         
-        // ✅ FORZAR USO DE RUTA DE USUARIO CON ID LIMPIO
-        const url = `/api/envios/usuario/${cleanId}`
-        const facturasUrl = `/api/facturas/usuario/${cleanId}`
+        // ✅ CONSTRUIR URLs CON ID LIMPIO
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
+        const url = `${apiUrl}/api/envios/usuario/${cleanId}`
+        const facturasUrl = `${apiUrl}/api/facturas/usuario/${cleanId}`
         
-        console.log(`📡 URL final envios: ${url}`)
-        console.log(`📡 URL final facturas: ${facturasUrl}`)
-        
-        console.log(`📡 Fetching envios desde: ${url}`)
-        console.log(`📡 Fetching facturas desde: ${facturasUrl}`)
+        console.log(`📡 URL FINAL ENVIOS: ${url}`)
+        console.log(`📡 URL FINAL FACTURAS: ${facturasUrl}`)
         
         let data: any[] = []
         let facturaMap = new Map<string, string>()

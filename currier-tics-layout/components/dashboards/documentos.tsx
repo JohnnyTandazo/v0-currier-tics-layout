@@ -82,7 +82,16 @@ export function Documentos() {
 
     const cargarPaquetes = async () => {
       try {
-        const response = await fetch(`/api/paquetes?usuarioId=${userId}`)
+        // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
+        const cleanId = String(userId).split(':')[0].trim()
+        console.log("🛠️ Limpiando ID corrupto:", userId, "-> ID Final:", cleanId)
+        
+        if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
+          setPaquetes([])
+          return
+        }
+        
+        const response = await fetch(`/api/paquetes?usuarioId=${cleanId}`)
         if (response.ok) {
           const data = await response.json()
           setPaquetes(Array.isArray(data) ? data : [])
