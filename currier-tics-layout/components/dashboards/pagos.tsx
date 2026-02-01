@@ -128,7 +128,7 @@ export function Pagos() {
 
         // Fetch facturas pendientes
         try {
-          const resFacturas = await fetch(`${apiUrl}/api/facturas`)
+          const resFacturas = await fetch(`${apiUrl}/api/facturas?usuarioId=${usuario.id}`)
           if (resFacturas.ok) {
             const data = await resFacturas.json()
             if (Array.isArray(data)) {
@@ -136,16 +136,21 @@ export function Pagos() {
               const misFacturas = data.filter(
                 (f: FacturaPendiente) => String(f.usuarioId || f.usuario?.id) === String(usuario.id)
               )
+              console.log("✅ Facturas pendientes cargadas:", misFacturas.length)
               setFacturasPendientes(misFacturas)
             }
+          } else {
+            console.warn("⚠️ Error cargando facturas:", resFacturas.status)
+            setFacturasPendientes([])
           }
-        } catch {
+        } catch (err) {
+          console.error("❌ Error fetching facturas:", err)
           setFacturasPendientes([])
         }
 
         // Fetch pagos recientes
         try {
-          const resPagos = await fetch(`${apiUrl}/api/pagos`)
+          const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${usuario.id}`)
           if (resPagos.ok) {
             const data = await resPagos.json()
             if (Array.isArray(data)) {
@@ -153,10 +158,15 @@ export function Pagos() {
               const misPagos = data.filter(
                 (p: PagoReciente) => String(p.usuarioId || p.usuario?.id) === String(usuario.id)
               )
+              console.log("✅ Pagos recientes cargados:", misPagos.length)
               setPagosRecientes(misPagos)
             }
+          } else {
+            console.warn("⚠️ Error cargando pagos:", resPagos.status)
+            setPagosRecientes([])
           }
-        } catch {
+        } catch (err) {
+          console.error("❌ Error fetching pagos:", err)
           setPagosRecientes([])
         }
       } catch (err) {
@@ -321,26 +331,32 @@ export function Pagos() {
                 <Label htmlFor="factura" className="text-foreground">
                   Seleccionar Factura
                 </Label>
-                <Select
-                  value={formData.facturaId}
-                  onValueChange={(v) => handleFormChange("facturaId", v)}
-                >
-                  <SelectTrigger className="bg-background/50 border-border/50">
-                    <SelectValue placeholder="Selecciona una factura pendiente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {facturasPendientes.map((factura) => (
-                      <SelectItem key={factura.id} value={factura.id.toString()}>
-                        <div className="flex items-center justify-between gap-4">
-                          <span>{factura.numeroFactura}</span>
-                          <span className="text-muted-foreground">
-                            ${(factura.total || 0).toFixed(2)}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {facturasPendientes.length === 0 ? (
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-400">
+                    📋 No tienes facturas pendientes. ¡Excelente!
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.facturaId}
+                    onValueChange={(v) => handleFormChange("facturaId", v)}
+                  >
+                    <SelectTrigger className="bg-background/50 border-border/50">
+                      <SelectValue placeholder="Selecciona una factura pendiente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facturasPendientes.map((factura) => (
+                        <SelectItem key={factura.id} value={factura.id.toString()}>
+                          <div className="flex items-center justify-between gap-4">
+                            <span>{factura.numeroFactura}</span>
+                            <span className="text-muted-foreground">
+                              ${(factura.total || 0).toFixed(2)}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {/* Amount */}
