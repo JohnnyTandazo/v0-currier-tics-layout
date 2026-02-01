@@ -70,40 +70,40 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
   const [loadingDetalles, setLoadingDetalles] = useState(false)
 
   // ✅ FUNCIÓN DEFENSIVA PARA CARGAR DETALLES
-  const handleVerDetalles = async (trackingCode: number | string | undefined) => {
+  const handleVerDetalles = async (envioId: number | string | undefined) => {
     try {
       setLoadingDetalles(true)
       
-      // ✅ VALIDACIÓN 1: Verificar que el código de rastreo sea válido
-      if (!trackingCode || trackingCode === "undefined" || trackingCode === "null") {
-        console.error("❌ [Frontend] Tracking code inválido o vacío:", trackingCode)
-        alert("Error: Código de rastreo inválido")
+      // ✅ VALIDACIÓN 1: Verificar que el ID sea válido
+      if (!envioId || envioId === "undefined" || envioId === "null") {
+        console.error("❌ [Frontend] ID inválido o vacío:", envioId)
+        alert("Error: ID de envío inválido")
         setLoadingDetalles(false)
         return
       }
 
-      // ✅ MANTENER COMO STRING (no convertir a número)
-      const trackingId = String(trackingCode).trim()
+      // ✅ USAR ID NUMÉRICO (más confiable que trackingCode)
+      const numericId = typeof envioId === "string" ? parseInt(envioId, 10) : envioId
       
-      if (!trackingId || trackingId.length === 0) {
-        console.error("❌ [Frontend] Tracking code vacío después de trim:", trackingCode)
-        alert("Error: Código de rastreo vacío")
+      if (isNaN(numericId) || numericId <= 0) {
+        console.error("❌ [Frontend] ID no es válido:", envioId)
+        alert("Error: ID de envío inválido")
         setLoadingDetalles(false)
         return
       }
 
-      console.log("🔍 [Frontend] Cargando detalles del envío - Tracking:", trackingId)
-      console.log("📡 [Frontend] Tracking Code - Tipo:", typeof trackingId, "Valor:", trackingId)
+      console.log("🔍 [Frontend] Cargando detalles del envío - ID:", numericId)
+      console.log("📡 [Frontend] ID numérico - Tipo:", typeof numericId, "Valor:", numericId)
 
-      // ✅ LLAMAR AL ENDPOINT DE TRACKING (no al de ID numérico)
-      const url = `/api/envios/${trackingId}`  // Este proxy llamará a /api/envios/tracking/{codigo}
-      console.log("📡 [Frontend] URL tracking endpoint:", url)
+      // ✅ LLAMAR AL ENDPOINT POR ID NUMÉRICO
+      const url = `/api/envios/${numericId}`
+      console.log("📡 [Frontend] URL endpoint:", url)
 
       const { data, error, status } = await defensiveFetch<EnvioDetalles>(
         url,
         {
           method: "GET",
-          fallbackData: createFallbackEnvio(trackingId),
+          fallbackData: createFallbackEnvio(numericId),
         }
       )
 
@@ -111,13 +111,13 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         console.error("❌ [Frontend] Error al cargar detalles")
         console.error("❌ URL:", url)
         console.error("❌ Error:", error, "Status:", status)
-        alert(`Error al cargar detalles:\n\n${error}\n\nCódigo de rastreo: ${trackingId}`)
+        alert(`Error al cargar detalles:\n\n${error}\n\nID: ${numericId}`)
         setLoadingDetalles(false)
         return
       }
 
       if (!data) {
-        console.warn("⚠️ [Frontend] No hay datos para tracking:", trackingId)
+        console.warn("⚠️ [Frontend] No hay datos para ID:", numericId)
         alert("No se pudieron cargar los detalles del envío.")
         setLoadingDetalles(false)
         return
@@ -496,10 +496,10 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                           size="sm"
                           onClick={() => {
                             console.log("🖱️ [Frontend] Click en Ver Detalles")
-                            console.log("  ├─ envio.trackingId:", envio.trackingId, "tipo:", typeof envio.trackingId)
-                            console.log("  ├─ envio.id (interno):", envio.id)
+                            console.log("  ├─ envio.id (ID numérico):", envio.id, "tipo:", typeof envio.id)
+                            console.log("  ├─ envio.trackingId:", envio.trackingId)
                             console.log("  └─ objeto completo:", envio)
-                            handleVerDetalles(envio.trackingId)
+                            handleVerDetalles(envio.id)
                           }}
                           disabled={loadingDetalles}
                           className="border-border/50 hover:bg-accent/50"

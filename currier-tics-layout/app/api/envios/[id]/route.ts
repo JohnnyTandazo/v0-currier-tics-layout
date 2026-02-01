@@ -40,11 +40,11 @@ export async function GET(
       );
     }
 
-    console.log("🔎 [API] Buscando envío por tracking code:", id);
+    console.log("🔎 [API] Buscando envío por ID:", id);
 
-    // ✅ PROXY AL BACKEND JAVA - RUTA DE BÚSQUEDA POR TRACKING: /api/envios/tracking/{codigo}
+    // ✅ PROXY AL BACKEND JAVA - BÚSQUEDA POR ID NUMÉRICO: /api/envios/{id}
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/api/envios/tracking/${id}`; // ✅ Usa endpoint de tracking
+    const endpoint = `${backendUrl}/api/envios/${id}`; // ✅ Usa ID numérico directo
     
     console.log("🌐 [API PROXY] Conectando con backend Java:", endpoint);
     console.log("🌐 [API PROXY] URL completa:", endpoint);
@@ -201,7 +201,7 @@ export async function PUT(
 
     // Llamar al backend
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/api/envios/tracking/${id}`; // ✅ Usa endpoint de tracking
+    const endpoint = `${backendUrl}/api/envios/${id}`; // ✅ Usa ID numérico
 
     console.log("📡 [API PUT] URL:", endpoint);
     const response = await fetch(endpoint, {
@@ -303,7 +303,7 @@ export async function DELETE(
     }
 
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/api/envios/tracking/${id}`; // ✅ Usa endpoint de tracking
+    const endpoint = `${backendUrl}/api/envios/${id}`; // ✅ Usa ID numérico
 
     console.log("📡 [API DELETE] URL:", endpoint);
     const response = await fetch(endpoint, {
