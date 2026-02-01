@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { safeFetch } from "@/lib/safeFetch"
+import { defensiveFetch, createFallbackEnvio } from "@/lib/defensiveFetch"
 import { formatearFecha } from "@/lib/formatDate"
 
 interface Envio {
@@ -74,53 +75,40 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
       setLoadingDetalles(true)
       console.log("🔍 [Frontend] Cargando detalles del envío ID:", envioId)
 
-      const response = await fetch(`/api/envios/${envioId}`)
-      
-      // ✅ LECTURA DEFENSIVA: Leer como texto primero
-      const text = await response.text()
-      console.log("📥 [Frontend] Respuesta status:", response.status)
-      console.log("📥 [Frontend] Respuesta body length:", text.length)
+      const { data, error, status } = await defensiveFetch<EnvioDetalles>(
+        `/api/envios/${envioId}`,
+        {
+          method: "GET",
+          fallbackData: createFallbackEnvio(envioId),
+        }
+      )
 
-      if (!response.ok) {
-        const errorMsg = `Error ${response.status}: No se pudieron cargar los detalles`
-        console.error("❌ [Frontend]", errorMsg)
-        alert(errorMsg)
+      if (error) {
+        console.error("❌ [Frontend] Error al cargar:", error)
+        alert(`Error: ${error}`)
         return
       }
 
-      // ✅ VALIDACIÓN: Respuesta no esté vacía
-      if (!text || text.trim().length === 0) {
-        console.warn("⚠️ [Frontend] Respuesta vacía del servidor")
-        alert("No se pudieron cargar los detalles del envío. Intenta de nuevo.")
+      if (!data) {
+        console.warn("⚠️ [Frontend] No hay datos disponibles")
+        alert("No se pudieron cargar los detalles del envío.")
         return
       }
 
-      // ✅ PARSEAR JSON: Solo si hay contenido válido
-      let detalles: EnvioDetalles
-      try {
-        detalles = JSON.parse(text)
-      } catch (parseError: any) {
-        console.error("💥 [Frontend] Error al parsear JSON:", parseError.message)
-        console.error("📄 [Frontend] Contenido recibido:", text.substring(0, 200))
-        alert("Respuesta del servidor inválida. Por favor, intenta de nuevo.")
-        return
-      }
-
-      // ✅ VALIDACIÓN: Objeto no esté vacío
-      if (!detalles || Object.keys(detalles).length === 0) {
-        console.warn("⚠️ [Frontend] Detalles vacíos")
-        alert("No se encontraron datos del envío.")
-        return
-      }
-
-      console.log("✅ [Frontend] Detalles cargados exitosamente:", detalles)
+      console.log("✅ [Frontend] Detalles cargados:", data)
 
       // Aquí iría la lógica para mostrar los detalles (modal, sidebar, etc.)
       // Por ahora solo log
-      alert(`Detalles del envío:\n\nTracking: ${detalles.trackingId}\nEstado: ${detalles.estado}\nDestinatario: ${detalles.destinatario}`)
+      const isFallback = (data as any)._fallback
+      const mensaje = isFallback
+        ? "⚠️ Datos no disponibles (usando fallback)"
+        : "✅ Detalles del envío"
 
+      alert(
+        `${mensaje}\n\nTracking: ${data.trackingId}\nEstado: ${data.estado}\nDestinatario: ${data.destinatario}`
+      )
     } catch (err: any) {
-      console.error("💥 [Frontend ERROR] Error crítico al cargar detalles:", err)
+      console.error("💥 [Frontend ERROR] Error crítico:", err)
       alert("Error de conexión. Por favor, intenta de nuevo.")
     } finally {
       setLoadingDetalles(false)
