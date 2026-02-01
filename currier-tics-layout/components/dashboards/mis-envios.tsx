@@ -222,18 +222,27 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         console.log("DATOS RAW:", data.length, "registros")
 
         // ✅ MAPEO DE CAMPOS: Normalizar estructura del backend
-        const normalizedEnvios = data.map((p: any) => ({
-          // Si el backend manda diferentes nombres, aquí hacemos el mapeo
-          id: p.id || p.idEnvio || p.id_envio || Math.random(), // CRÍTICO: Asegurar que hay ID
-          trackingId: p.trackingId || p.tracking || p.numeroGuia || p.numero_guia || p.trackingNumber || "SIN-ID",
-          fecha: p.fecha || p.fechaCreacion || p.createdAt || new Date().toISOString(),
-          destinatario: p.destinatario || p.recipient || p.nombre_destinatario || "SIN-DESTINATARIO",
-          direccion: p.direccion || p.address || p.direccion_envio || "SIN-DIRECCIÓN",
-          estado: p.estado || p.status || "PROCESANDO",
-          peso: p.peso || p.weight || 0,
-          descripcion: p.descripcion || p.description || "SIN-DESCRIPCIÓN",
-          usuarioId: p.usuarioId || p.usuario?.id || p.id_usuario || p.usuario_id || usuarioStored.id,
-        }))
+        const normalizedEnvios = data.map((p: any, index: number) => {
+          // CRÍTICO: Validar que siempre haya un ID válido
+          const finalId = p.id || p.idEnvio || p.id_envio || p.paqueteId || p.id_paquete
+          
+          if (!finalId) {
+            console.error("⚠️ [MAPEO] Envío sin ID en índice", index, ":", p)
+          }
+          
+          return {
+            // Si el backend manda diferentes nombres, aquí hacemos el mapeo
+            id: finalId || index, // Usar índice solo como último recurso (NO random)
+            trackingId: p.trackingId || p.tracking || p.numeroGuia || p.numero_guia || p.trackingNumber || `PKG-${index}`,
+            fecha: p.fecha || p.fechaCreacion || p.createdAt || new Date().toISOString(),
+            destinatario: p.destinatario || p.recipient || p.nombre_destinatario || "SIN-DESTINATARIO",
+            direccion: p.direccion || p.address || p.direccion_envio || "SIN-DIRECCIÓN",
+            estado: p.estado || p.status || "PROCESANDO",
+            peso: p.peso || p.weight || 0,
+            descripcion: p.descripcion || p.description || "SIN-DESCRIPCIÓN",
+            usuarioId: p.usuarioId || p.usuario?.id || p.id_usuario || p.usuario_id || usuarioStored.id,
+          }
+        })
 
         console.log("✅ ENVÍOS NORMALIZADOS (primero):", normalizedEnvios[0])
 
@@ -475,7 +484,10 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            console.log("🖱️ [Frontend] Click en Ver Detalles para ID:", envio.id, "tipo:", typeof envio.id)
+                            console.log("🖱️ [Frontend] Click en Ver Detalles")
+                            console.log("  ├─ envio.id:", envio.id, "tipo:", typeof envio.id)
+                            console.log("  ├─ envio.trackingId:", envio.trackingId)
+                            console.log("  └─ objeto completo:", envio)
                             handleVerDetalles(envio.id)
                           }}
                           disabled={loadingDetalles}
