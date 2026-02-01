@@ -96,6 +96,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
   const { toast } = useToast()
 
   const [pasoActual, setPasoActual] = useState(0)
+  const [userId, setUserId] = useState<number | null>(null)
   const [direcciones, setDirecciones] = useState<Direccion[]>([])
   const [isLoadingDirecciones, setIsLoadingDirecciones] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -138,27 +139,38 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
     return (costoBase + costoPeso + seguro).toFixed(2)
   }, [formValues.peso, formValues.valorDeclarado])
 
+  // EFECTO 1: Obtener el ID del usuario al montar (UNA SOLA VEZ)
   useEffect(() => {
-    const cargarDirecciones = async () => {
-      const safeId = getSafeUserId()
-      
-      if (!safeId) {
-        console.error("🚨 No se encontró ID de usuario, abortando cargarDirecciones")
-        toast({
-          title: "Error",
-          description: "Error: Usuario no identificado",
-          variant: "destructive",
-        })
-        setIsLoadingDirecciones(false)
-        return
-      }
+    const safeId = getSafeUserId()
+    if (safeId) {
+      console.log("🔐 Wizard: ID de usuario obtenido:", safeId)
+      setUserId(safeId)
+    } else {
+      console.error("🚨 Wizard: No se encontró ID de usuario")
+      toast({
+        title: "Error",
+        description: "Error: Usuario no identificado",
+        variant: "destructive",
+      })
+      setIsLoadingDirecciones(false)
+    }
+  }, [toast])
 
-      console.log("🧭 Wizard cargando direcciones para ID:", safeId)
+  // EFECTO 2: Cargar direcciones SOLO cuando el ID cambia (y si no las tenemos ya)
+  useEffect(() => {
+    if (!userId || direcciones.length > 0) {
+      // Si no tenemos ID o ya cargamos direcciones, NO hacer nada
+      setIsLoadingDirecciones(false)
+      return
+    }
+
+    const cargarDirecciones = async () => {
+      console.log("⚡ Wizard: Fetching direcciones (SOLO UNA VEZ) para ID:", userId)
       setIsLoadingDirecciones(true)
       try {
-        const url = `/api/direcciones?usuarioId=${safeId}`
+        const url = `/api/direcciones?usuarioId=${userId}`
         console.log("📥 GET:", url)
-        
+
         const response = await fetch(url, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
@@ -175,7 +187,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
           // Auto-seleccionar la primera dirección principal o la primera disponible
           const principal = data.find((d) => d.esPrincipal)
           if (principal) {
-            reset({ ...formValues, direccionOrigenId: principal.id })
+            reset({ direccionOrigenId: principal.id })
           }
         }
       } catch (error) {
@@ -191,7 +203,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
     }
 
     cargarDirecciones()
-  }, [toast, formValues, reset])
+  }, [userId, reset, toast])
 
   const validarPaso = useCallback(async (): Promise<boolean> => {
     if (pasoActual === 0) {
