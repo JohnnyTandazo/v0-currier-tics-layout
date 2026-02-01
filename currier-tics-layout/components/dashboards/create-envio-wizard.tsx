@@ -276,6 +276,19 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
       console.log("📤 Enviando Payload:", JSON.stringify(payload, null, 2))
 
+      // 🔥 DEBUG GIGANTE - VER EXACTAMENTE QUÉ SE ENVÍA
+      console.log("╔════════════════════════════════════════════════════════╗")
+      console.log("║         📦 [DEBUG] PAYLOAD A ENVIAR - VERIFICAR       ║")
+      console.log("╚════════════════════════════════════════════════════════╝")
+      console.log(JSON.stringify(payload, null, 2))
+      console.log("╔════════════════════════════════════════════════════════╗")
+      console.log("║ ¿destinatarioNombre tiene datos? →", payload.destinatarioNombre)
+      console.log("║ ¿destinatarioCiudad tiene datos? →", payload.destinatarioCiudad)
+      console.log("║ ¿destinatarioDireccion tiene datos? →", payload.destinatarioDireccion)
+      console.log("╚════════════════════════════════════════════════════════╝")
+      
+      alert("✋ PAUSA DEBUG: Revisa la consola del navegador (F12) antes de que continúe")
+
       const response = await fetch("/api/envios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
