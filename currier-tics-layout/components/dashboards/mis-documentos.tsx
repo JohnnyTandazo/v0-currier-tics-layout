@@ -6,14 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Package, Truck, Printer, FileText, Loader2 } from "lucide-react"
+import { Package, Truck, Printer, FileText, Loader2, Eye } from "lucide-react"
 import { PDFDownloadLink } from "@react-pdf/renderer"
 import { ShippingLabel } from "@/components/pdf/shipping-label"
+import { PDFPreviewModal } from "@/components/pdf/pdf-preview-modal"
 
 export default function MisDocumentos() {
   const [envios, setEnvios] = useState<any[]>([])
   const [paquetes, setPaquetes] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedEnvio, setSelectedEnvio] = useState<any>(null)
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -102,17 +104,14 @@ export default function MisDocumentos() {
                         </TableCell>
                         <TableCell className="text-right">
                           {env.numeroTracking && (
-                            <PDFDownloadLink
-                              document={<ShippingLabel envio={env} />}
-                              fileName={`GUIA-${env.numeroTracking}.pdf`}
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => setSelectedEnvio(env)}
                             >
-                              {({ loading }) => (
-                                <Button size="sm" variant="default" disabled={loading}>
-                                  <Printer className="mr-2 h-4 w-4" />
-                                  {loading ? "Generando..." : "Descargar"}
-                                </Button>
-                              )}
-                            </PDFDownloadLink>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver Guía
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
@@ -180,6 +179,12 @@ export default function MisDocumentos() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <PDFPreviewModal
+        isOpen={!!selectedEnvio}
+        onClose={() => setSelectedEnvio(null)}
+        envio={selectedEnvio}
+      />
     </div>
   )
 }
