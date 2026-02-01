@@ -203,14 +203,41 @@ export async function PUT(
       body: JSON.stringify(body),
     });
 
+    // ✅ LECTURA DEFENSIVA
     const text = await response.text();
-    const data = text ? JSON.parse(text) : {};
-
+    
     if (!response.ok) {
       console.warn("⚠️ [API PUT] Error al actualizar:", response.status);
+      const data = text ? JSON.parse(text) : {};
       return NextResponse.json(
-        { error: "Error al actualizar envío", details: data },
+        { error: "Error al actualizar envío", details: data || text },
         { status: response.status }
+      );
+    }
+
+    // ✅ VALIDACIÓN: Respuesta no esté vacía
+    if (!text || text.trim().length === 0) {
+      console.warn("⚠️ [API PUT] Respuesta vacía del backend");
+      return NextResponse.json(
+        {
+          message: "Envío actualizado correctamente",
+          envio: body,
+        },
+        { status: 200 }
+      );
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseError: any) {
+      console.error("💫 [API PUT] Error al parsear respuesta:", parseError.message);
+      return NextResponse.json(
+        {
+          message: "Envío actualizado correctamente",
+          envio: body,
+        },
+        { status: 200 }
       );
     }
 
@@ -275,14 +302,41 @@ export async function DELETE(
       },
     });
 
+    // ✅ LECTURA DEFENSIVA
     const text = await response.text();
-    const data = text ? JSON.parse(text) : {};
 
     if (!response.ok) {
       console.warn("⚠️ [API DELETE] Error al eliminar:", response.status);
+      const data = text ? JSON.parse(text) : {};
       return NextResponse.json(
-        { error: "Error al eliminar envío", details: data },
+        { error: "Error al eliminar envío", details: data || text },
         { status: response.status }
+      );
+    }
+
+    // ✅ VALIDACIÓN: Respuesta no esté vacía
+    if (!text || text.trim().length === 0) {
+      console.warn("⚠️ [API DELETE] Respuesta vacía del backend");
+      return NextResponse.json(
+        {
+          message: "Envío eliminado correctamente",
+          id: id,
+        },
+        { status: 200 }
+      );
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseError: any) {
+      console.error("💫 [API DELETE] Error al parsear respuesta:", parseError.message);
+      return NextResponse.json(
+        {
+          message: "Envío eliminado correctamente",
+          id: id,
+        },
+        { status: 200 }
       );
     }
 

@@ -46,6 +46,15 @@ interface Envio {
   usuarioId: number
 }
 
+interface EnvioDetalles extends Envio {
+  // Campos adicionales que pueden venir en los detalles
+  origen?: string
+  destino?: string
+  contenido?: string
+  referencia?: string
+  [key: string]: any
+}
+
 interface MisEnviosProps {
   onViewDetails?: (trackingId: string) => void
 }
@@ -57,6 +66,66 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [usuario, setUsuario] = useState<any>(null)
+  const [loadingDetalles, setLoadingDetalles] = useState(false)
+
+  // ✅ FUNCIÓN DEFENSIVA PARA CARGAR DETALLES
+  const handleVerDetalles = async (envioId: number) => {
+    try {
+      setLoadingDetalles(true)
+      console.log("🔍 [Frontend] Cargando detalles del envío ID:", envioId)
+
+      const response = await fetch(`/api/envios/${envioId}`)
+      
+      // ✅ LECTURA DEFENSIVA: Leer como texto primero
+      const text = await response.text()
+      console.log("📥 [Frontend] Respuesta status:", response.status)
+      console.log("📥 [Frontend] Respuesta body length:", text.length)
+
+      if (!response.ok) {
+        const errorMsg = `Error ${response.status}: No se pudieron cargar los detalles`
+        console.error("❌ [Frontend]", errorMsg)
+        alert(errorMsg)
+        return
+      }
+
+      // ✅ VALIDACIÓN: Respuesta no esté vacía
+      if (!text || text.trim().length === 0) {
+        console.warn("⚠️ [Frontend] Respuesta vacía del servidor")
+        alert("No se pudieron cargar los detalles del envío. Intenta de nuevo.")
+        return
+      }
+
+      // ✅ PARSEAR JSON: Solo si hay contenido válido
+      let detalles: EnvioDetalles
+      try {
+        detalles = JSON.parse(text)
+      } catch (parseError: any) {
+        console.error("💥 [Frontend] Error al parsear JSON:", parseError.message)
+        console.error("📄 [Frontend] Contenido recibido:", text.substring(0, 200))
+        alert("Respuesta del servidor inválida. Por favor, intenta de nuevo.")
+        return
+      }
+
+      // ✅ VALIDACIÓN: Objeto no esté vacío
+      if (!detalles || Object.keys(detalles).length === 0) {
+        console.warn("⚠️ [Frontend] Detalles vacíos")
+        alert("No se encontraron datos del envío.")
+        return
+      }
+
+      console.log("✅ [Frontend] Detalles cargados exitosamente:", detalles)
+
+      // Aquí iría la lógica para mostrar los detalles (modal, sidebar, etc.)
+      // Por ahora solo log
+      alert(`Detalles del envío:\n\nTracking: ${detalles.trackingId}\nEstado: ${detalles.estado}\nDestinatario: ${detalles.destinatario}`)
+
+    } catch (err: any) {
+      console.error("💥 [Frontend ERROR] Error crítico al cargar detalles:", err)
+      alert("Error de conexión. Por favor, intenta de nuevo.")
+    } finally {
+      setLoadingDetalles(false)
+    }
+  }
 
   useEffect(() => {
     const fetchEnvios = async () => {
@@ -331,10 +400,15 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onViewDetails?.(envio.trackingId)}
+                          onClick={() => handleVerDetalles(envio.id)}
+                          disabled={loadingDetalles}
                           className="border-border/50 hover:bg-accent/50"
                         >
-                          <Eye className="mr-1.5 h-3.5 w-3.5" />
+                          {loadingDetalles ? (
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Eye className="mr-1.5 h-3.5 w-3.5" />
+                          )}
                           Ver Detalles
                         </Button>
                       </TableCell>
