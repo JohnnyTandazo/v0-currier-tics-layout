@@ -214,8 +214,8 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           // CRÍTICO: Validar que siempre haya un ID válido
           const finalId = p.id || p.idEnvio || p.id_envio || p.paqueteId || p.id_paquete || p.numeroGuia || p.numero_guia || p.referencia || p.reference
           
-          // CRÍTICO: Obtener el trackingId REAL del backend
-          const realTrackingId = p.trackingId || p.tracking || p.numeroGuia || p.numero_guia || p.trackingNumber || p.numeroTracking || p.numero_tracking
+          // CRÍTICO: El backend usa "trackingNumber" como campo principal
+          const realTrackingId = p.trackingNumber || p.numeroTracking || p.numero_tracking || p.trackingId || p.tracking || p.numeroGuia || p.numero_guia
           
           if (!finalId) {
             console.error("⚠️ [MAPEO] Objeto en índice", index, "NO TIENE ningún campo de ID:")
