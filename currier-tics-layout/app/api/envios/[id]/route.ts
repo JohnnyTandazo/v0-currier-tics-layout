@@ -16,8 +16,10 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    // ✅ LOG 1: Mostrar ID recibido
-    const idParam = params.id;
+    // ✅ AWAIT params (Next.js 15+)
+    const resolvedParams = await params;
+    const idParam = resolvedParams.id;
+    
     console.log("🔍 [API GET /api/envios/[id]] Solicitado ID:", idParam);
 
     // ✅ VALIDACIÓN 1: Verificar que el ID sea válido
@@ -175,7 +177,10 @@ export async function PUT(
   { params }: RouteParams
 ) {
   try {
-    const idParam = params.id;
+    // ✅ AWAIT params (Next.js 15+)
+    const resolvedParams = await params;
+    const idParam = resolvedParams.id;
+    
     console.log("🔧 [API PUT /api/envios/[id]] Actualizando ID:", idParam);
 
     // Validaciones del ID
@@ -283,7 +288,10 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
-    const idParam = params.id;
+    // ✅ AWAIT params (Next.js 15+)
+    const resolvedParams = await params;
+    const idParam = resolvedParams.id;
+    
     console.log("🗑️ [API DELETE /api/envios/[id]] Eliminando ID:", idParam);
 
     if (!idParam) {
