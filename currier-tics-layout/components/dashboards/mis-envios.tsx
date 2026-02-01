@@ -49,6 +49,8 @@ interface Envio {
   trackingId: string
   fecha: string
   destinatario: string
+  destinatarioCiudad?: string
+  destinatarioDireccion?: string
   direccion: string
   estado: "EN_TRANSITO" | "ENTREGADO" | "RETENIDO" | "PROCESANDO" | "EN_ADUANA"
   peso: number
@@ -233,8 +235,10 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
             id: finalId || undefined,
             trackingId: realTrackingId || `PKG-${index}`,
             fecha: p.fechaCreacion || p.fecha || p.createdAt || new Date().toISOString(),
-            destinatario: p.destinatario || p.recipient || p.nombre_destinatario || "SIN-DESTINATARIO",
-            direccion: p.direccion || p.address || p.direccion_envio || "SIN-DIRECCIÓN",
+            destinatario: p.destinatarioNombre || p.destinatario || p.recipient || p.nombre_destinatario || "SIN-DESTINATARIO",
+            destinatarioCiudad: p.destinatarioCiudad || p.ciudad || "Sin ciudad",
+            destinatarioDireccion: p.destinatarioDireccion || p.direccion || p.address || p.direccion_envio || "SIN-DIRECCIÓN",
+            direccion: p.destinatarioDireccion || p.direccion || p.address || p.direccion_envio || "SIN-DIRECCIÓN",
             estado: p.estado || p.status || "PROCESANDO",
             peso: p.pesoLibras || p.peso || p.weight || 0,
             descripcion: p.descripcion || p.description || "SIN-DESCRIPCIÓN",
@@ -475,9 +479,11 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium text-foreground">{envio.destinatario}</p>
-                          <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                            {envio.direccion}
+                          <p className="font-medium text-foreground">
+                            {envio.destinatario || "Sin nombre"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {envio.destinatarioCiudad || "Sin ciudad"}
                           </p>
                         </div>
                       </TableCell>
