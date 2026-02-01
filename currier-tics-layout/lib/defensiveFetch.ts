@@ -140,10 +140,10 @@ export async function defensiveFetch<T>(
 /**
  * Helper para simular datos fallback en desarrollo
  */
-export function createFallbackEnvio(id: number): any {
+export function createFallbackEnvio(id: number | string): any {
   return {
-    id,
-    trackingId: `TRACK-${id}`,
+    id: typeof id === 'number' ? id : 0,
+    trackingId: typeof id === 'string' ? id : `TRACK-${id}`,
     destinatario: "Datos no disponibles",
     direccion: "Dirección no disponible",
     estado: "DESCONOCIDO",

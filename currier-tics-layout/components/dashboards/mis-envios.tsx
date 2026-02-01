@@ -70,102 +70,68 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
   const [loadingDetalles, setLoadingDetalles] = useState(false)
 
   // ✅ FUNCIÓN DEFENSIVA PARA CARGAR DETALLES
-  const handleVerDetalles = async (envioId: number | string | undefined) => {
+  const handleVerDetalles = async (trackingCode: number | string | undefined) => {
     try {
       setLoadingDetalles(true)
       
-      // ✅ VALIDACIÓN 1: Verificar que el ID sea válido
-      if (!envioId || envioId === "undefined" || envioId === "null") {
-        console.error("❌ [Frontend] ID inválido o vacío:", envioId)
-        alert("Error: ID de envío inválido")
+      // ✅ VALIDACIÓN 1: Verificar que el código de rastreo sea válido
+      if (!trackingCode || trackingCode === "undefined" || trackingCode === "null") {
+        console.error("❌ [Frontend] Tracking code inválido o vacío:", trackingCode)
+        alert("Error: Código de rastreo inválido")
         setLoadingDetalles(false)
         return
       }
 
-      // ✅ VALIDACIÓN 2: Convertir a número si es string
-      const numericId = typeof envioId === "string" ? parseInt(envioId, 10) : envioId
+      // ✅ MANTENER COMO STRING (no convertir a número)
+      const trackingId = String(trackingCode).trim()
       
-      if (isNaN(numericId) || numericId <= 0) {
-        console.error("❌ [Frontend] ID no es un número válido:", envioId)
-        alert("Error: ID de envío debe ser un número válido")
+      if (!trackingId || trackingId.length === 0) {
+        console.error("❌ [Frontend] Tracking code vacío después de trim:", trackingCode)
+        alert("Error: Código de rastreo vacío")
         setLoadingDetalles(false)
         return
       }
 
-      console.log("🔍 [Frontend] Cargando detalles del envío ID:", numericId)
-      console.log("📡 [Frontend] ID recibido - Tipo:", typeof numericId, "Valor:", numericId)
+      console.log("🔍 [Frontend] Cargando detalles del envío - Tracking:", trackingId)
+      console.log("📡 [Frontend] Tracking Code - Tipo:", typeof trackingId, "Valor:", trackingId)
 
-      // ✅ INTENTAR MÚLTIPLES RUTAS (porque el backend puede estar en /api/paquetes o /api/envios)
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-      
-      // Opción 1: Intentar /api/paquetes (que es donde viene la lista)
-      const url1 = `${apiUrl}/api/paquetes/${numericId}`
-      console.log("📡 [Frontend] URL opción 1 (paquetes):", url1)
+      // ✅ LLAMAR AL ENDPOINT DE TRACKING (no al de ID numérico)
+      const url = `/api/envios/${trackingId}`  // Este proxy llamará a /api/envios/tracking/{codigo}
+      console.log("📡 [Frontend] URL tracking endpoint:", url)
 
-      const { data: data1, error: error1, status: status1 } = await defensiveFetch<EnvioDetalles>(
-        `/api/paquetes/${numericId}`,
+      const { data, error, status } = await defensiveFetch<EnvioDetalles>(
+        url,
         {
           method: "GET",
-          fallbackData: createFallbackEnvio(numericId),
+          fallbackData: createFallbackEnvio(trackingId),
         }
       )
 
-      // Si funciona la opción 1, usarla
-      if (!error1 && data1) {
-        console.log("✅ [Frontend] ÉXITO - URL /api/paquetes funcionó:", data1)
-        const isFallback = (data1 as any)._fallback
-        const mensaje = isFallback
-          ? "⚠️ Datos no disponibles (usando fallback)"
-          : "✅ Detalles del envío"
-
-        alert(
-          `${mensaje}\n\nTracking: ${data1.trackingId}\nEstado: ${data1.estado}\nDestinatario: ${data1.destinatario}`
-        )
+      if (error) {
+        console.error("❌ [Frontend] Error al cargar detalles")
+        console.error("❌ URL:", url)
+        console.error("❌ Error:", error, "Status:", status)
+        alert(`Error al cargar detalles:\n\n${error}\n\nCódigo de rastreo: ${trackingId}`)
         setLoadingDetalles(false)
         return
       }
 
-      console.warn("⚠️ [Frontend] URL /api/paquetes devolvió error:", error1, "Status:", status1)
-
-      // Opción 2: Intentar /api/envios (respaldo)
-      const url2 = `/api/envios/${numericId}`
-      console.log("📡 [Frontend] URL opción 2 (envios):", url2)
-
-      const { data: data2, error: error2, status: status2 } = await defensiveFetch<EnvioDetalles>(
-        url2,
-        {
-          method: "GET",
-          fallbackData: createFallbackEnvio(numericId),
-        }
-      )
-
-      if (error2) {
-        console.error("❌ [Frontend] AMBAS URLs fallaron")
-        console.error("❌ Error en /api/paquetes:", error1, "Status:", status1)
-        console.error("❌ Error en /api/envios:", error2, "Status:", status2)
-        alert(
-          `Error al cargar detalles:\n\nURL 1 (/api/paquetes/${numericId}): ${error1}\nURL 2 (/api/envios/${numericId}): ${error2}`
-        )
-        setLoadingDetalles(false)
-        return
-      }
-
-      if (!data2) {
-        console.warn("⚠️ [Frontend] No hay datos en opción 2 para ID:", numericId)
+      if (!data) {
+        console.warn("⚠️ [Frontend] No hay datos para tracking:", trackingId)
         alert("No se pudieron cargar los detalles del envío.")
         setLoadingDetalles(false)
         return
       }
 
-      console.log("✅ [Frontend] ÉXITO - URL /api/envios funcionó:", data2)
+      console.log("✅ [Frontend] ÉXITO - Datos del envío:", data)
 
-      const isFallback = (data2 as any)._fallback
+      const isFallback = (data as any)._fallback
       const mensaje = isFallback
         ? "⚠️ Datos no disponibles (usando fallback)"
         : "✅ Detalles del envío"
 
       alert(
-        `${mensaje}\n\nTracking: ${data2.trackingId}\nEstado: ${data2.estado}\nDestinatario: ${data2.destinatario}`
+        `${mensaje}\n\nTracking: ${data.trackingId}\nEstado: ${data.estado}\nDestinatario: ${data.destinatario}`
       )
     } catch (err: any) {
       console.error("💥 [Frontend ERROR] Error crítico:", err)
