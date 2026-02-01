@@ -133,21 +133,22 @@ export function Pagos() {
 
     const fetchData = async () => {
       try {
-        // ✅ LIMPIAR ID MAL FORMADO (1:1 → 1)
-        const cleanId = String(usuario.id).split(':')[0].trim()
+        // ✅ LIMPIAR ID: Extraer solo números (remove :1 suffix)
+        const cleanId = String(usuario.id).replace(/[^0-9]/g, '')
         console.log(`📝 ID original: ${usuario.id} | ID limpio: ${cleanId}`)
+        console.log("Solicitando datos para ID limpio:", cleanId)
         
-        // ✅ VALIDAR que el ID sea un número
+        // ✅ VALIDAR que el ID sea un número válido
         if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
           console.error(`❌ ID inválido después de limpiar: ${cleanId}`)
           setLoading(false)
           return
         }
         
-        console.log(`✅ Llamando a API con ID limpio: ${cleanId}`)
+        console.log(`✅ Usuario autenticado: ID numérico puro: ${cleanId}`)
         
         const apiUrl = process.env.NEXT_PUBLIC_API_URL
-        console.log("🌐 API URL:", apiUrl)
+        console.log("🌐 API URL base:", apiUrl)
         if (!apiUrl) {
           console.error("❌ API URL no configurada")
           setLoading(false)
@@ -158,6 +159,7 @@ export function Pagos() {
         try {
           console.log("🔄 Fetching facturas para usuario.id:", cleanId)
           const urlFacturas = `${apiUrl}/api/facturas/usuario/${cleanId}`
+          console.log("📍 URL final facturas:", urlFacturas)
           console.log("📍 URL completa:", urlFacturas)
           
           const resFacturas = await fetch(urlFacturas)
@@ -208,7 +210,9 @@ export function Pagos() {
 
         // Fetch pagos recientes
         try {
-          const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${cleanId}`)
+          const urlPagos = `${apiUrl}/api/pagos?usuarioId=${cleanId}`
+          console.log("📍 URL final pagos:", urlPagos)
+          const resPagos = await fetch(urlPagos)
           if (resPagos.ok) {
             const text = await resPagos.text()
             

@@ -169,11 +169,12 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           return
         }
 
-        // ✅ LIMPIAR ID MAL FORMADO (1:1 → 1)
-        const cleanId = String(usuarioStored.id).split(':')[0].trim()
+        // ✅ LIMPIAR ID: Extraer solo números (remove :1 suffix)
+        const cleanId = String(usuarioStored.id).replace(/[^0-9]/g, '')
         console.log(`📝 ID original: ${usuarioStored.id} | ID limpio: ${cleanId}`)
+        console.log("Solicitando datos para ID limpio:", cleanId)
         
-        // ✅ VALIDAR que el ID sea un número
+        // ✅ VALIDAR que el ID sea un número válido
         if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
           console.error(`❌ ID inválido después de limpiar: ${cleanId}`)
           setUsuario(null)
@@ -183,14 +184,16 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           return
         }
         
-        console.log(`✅ Llamando a API con ID limpio: ${cleanId}`)
-        console.log(`✅ Usuario autenticado: ID ${cleanId}`)
+        console.log(`✅ Usuario autenticado: ID numérico puro: ${cleanId}`)
         
         setUsuario(usuarioStored)
         
-        // ✅ FORZAR USO DE RUTA DE USUARIO - NUNCA usar /api/envios sin usuario
-        const url = `/api/envios/usuario/${encodeURIComponent(cleanId)}`
-        const facturasUrl = `/api/facturas/usuario/${encodeURIComponent(cleanId)}`
+        // ✅ FORZAR USO DE RUTA DE USUARIO CON ID LIMPIO
+        const url = `/api/envios/usuario/${cleanId}`
+        const facturasUrl = `/api/facturas/usuario/${cleanId}`
+        
+        console.log(`📡 URL final envios: ${url}`)
+        console.log(`📡 URL final facturas: ${facturasUrl}`)
         
         console.log(`📡 Fetching envios desde: ${url}`)
         console.log(`📡 Fetching facturas desde: ${facturasUrl}`)
