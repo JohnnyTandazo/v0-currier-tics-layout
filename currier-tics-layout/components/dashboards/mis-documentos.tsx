@@ -1,0 +1,185 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Package, Truck, Printer, FileText, Loader2 } from "lucide-react"
+import { PDFDownloadLink } from "@react-pdf/renderer"
+import { ShippingLabel } from "@/components/pdf/shipping-label"
+
+export default function MisDocumentos() {
+  const [envios, setEnvios] = useState<any[]>([])
+  const [paquetes, setPaquetes] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        // Cargar Envíos
+        const user = localStorage.getItem("usuario")
+        if (user) {
+          const { id } = JSON.parse(user)
+          const resEnvios = await fetch(`/api/envios?usuarioId=${id}`)
+          if (resEnvios.ok) {
+            const dataEnvios = await resEnvios.json()
+            setEnvios(Array.isArray(dataEnvios) ? dataEnvios : [])
+          }
+        }
+
+        // Cargar Paquetes (Importaciones)
+        const resPaquetes = await fetch("/api/paquetes")
+        if (resPaquetes.ok) {
+          const dataPaquetes = await resPaquetes.json()
+          setPaquetes(Array.isArray(dataPaquetes) ? dataPaquetes : [])
+        }
+      } catch (error) {
+        console.error("Error cargando datos:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    cargarDatos()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Mis Documentos</h1>
+        <p className="text-muted-foreground mt-1">
+          Gestiona tus facturas y guías de envío
+        </p>
+      </div>
+
+      <Tabs defaultValue="envios" className="w-full">
+        <TabsList>
+          <TabsTrigger value="envios">
+            <Truck className="mr-2 h-4 w-4" /> Envíos Nacionales
+          </TabsTrigger>
+          <TabsTrigger value="importaciones">
+            <Package className="mr-2 h-4 w-4" /> Importaciones
+          </TabsTrigger>
+        </TabsList>
+
+        {/* TAB ENVIOS */}
+        <TabsContent value="envios">
+          <Card>
+            <CardHeader>
+              <CardTitle>Mis Guías de Remisión</CardTitle>
+              <CardDescription>Descarga las guías de tus envíos nacionales</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tracking</TableHead>
+                      <TableHead>Destino</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Guía PDF</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {envios.map((env: any) => (
+                      <TableRow key={env.id}>
+                        <TableCell className="font-bold font-mono">
+                          {env.numeroTracking}
+                        </TableCell>
+                        <TableCell>{env.ciudad || "N/A"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{env.estado}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {env.numeroTracking && (
+                            <PDFDownloadLink
+                              document={<ShippingLabel envio={env} />}
+                              fileName={`GUIA-${env.numeroTracking}.pdf`}
+                            >
+                              {({ loading }) => (
+                                <Button size="sm" variant="default" disabled={loading}>
+                                  <Printer className="mr-2 h-4 w-4" />
+                                  {loading ? "Generando..." : "Descargar"}
+                                </Button>
+                              )}
+                            </PDFDownloadLink>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {envios.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
+                          No hay envíos creados.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB IMPORTACIONES */}
+        <TabsContent value="importaciones">
+          <Card>
+            <CardHeader>
+              <CardTitle>Facturas de Importación</CardTitle>
+              <CardDescription>Historial de tus paquetes importados</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tracking USA</TableHead>
+                      <TableHead>Tienda</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead className="text-right">Factura</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paquetes.map((pkg: any) => (
+                      <TableRow key={pkg.id}>
+                        <TableCell className="font-mono">
+                          {pkg.trackingId || pkg.tracking || "—"}
+                        </TableCell>
+                        <TableCell>{pkg.tienda || pkg.descripcion || "—"}</TableCell>
+                        <TableCell className="font-semibold">
+                          ${pkg.precioTotal || pkg.precio || "0.00"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="ghost" disabled>
+                            <FileText className="mr-2 h-4 w-4" /> Próximamente
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {paquetes.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
+                          No hay importaciones registradas.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
