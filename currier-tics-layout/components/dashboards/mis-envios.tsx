@@ -162,17 +162,24 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         const usuarioStored = JSON.parse(localStorage.getItem("usuario") || "null")
         
         if (!usuarioStored || !usuarioStored.id) {
-          console.log("Usuario no autenticado")
+          console.log("❌ Usuario no autenticado - No hay ID de usuario")
           setUsuario(null)
           setEnvios([])
           setIsLoading(false)
           return
         }
+
+        const usuarioId = usuarioStored.id
+        console.log(`✅ Usuario autenticado: ID ${usuarioId}`)
         
         setUsuario(usuarioStored)
         
-        const url = `/api/envios/usuario/${encodeURIComponent(String(usuarioStored.id))}`
-        const facturasUrl = `/api/facturas/usuario/${encodeURIComponent(String(usuarioStored.id))}`
+        // ✅ FORZAR USO DE RUTA DE USUARIO - NUNCA usar /api/envios sin usuario
+        const url = `/api/envios/usuario/${encodeURIComponent(String(usuarioId))}`
+        const facturasUrl = `/api/facturas/usuario/${encodeURIComponent(String(usuarioId))}`
+        
+        console.log(`📡 Fetching envios desde: ${url}`)
+        console.log(`📡 Fetching facturas desde: ${facturasUrl}`)
         
         let data: any[] = []
         let facturaMap = new Map<string, string>()
@@ -180,14 +187,17 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         try {
           const [fetchedData, facturasData] = await Promise.all([safeFetch(url), safeFetch(facturasUrl)])
 
-          // Verificar que data sea un array antes de filtrar
+          // ✅ Validar que sea array
           if (!Array.isArray(fetchedData)) {
-            console.error("❌ Datos no son array:", fetchedData)
+            console.error("❌ Datos de envios no son array:", typeof fetchedData, fetchedData)
             setEnvios([])
+            setError("El servidor no retornó una lista válida de envíos")
             return
           }
 
           data = fetchedData
+          console.log(`✅ Envios recibidos: ${data.length} registros`)
+          
           const facturasArray = Array.isArray(facturasData) ? facturasData : []
           facturaMap = new Map<string, string>()
           facturasArray.forEach((f: any) => {
@@ -196,8 +206,10 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
               facturaMap.set(String(envioId), f.estado || "PENDIENTE")
             }
           })
+          console.log(`✅ Facturas mapeadas: ${facturaMap.size}`)
         } catch (fetchErr) {
           console.error("❌ Error fetching envios/facturas:", fetchErr)
+          setError(`Error cargando datos: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`)
           setEnvios([])
           return
         }

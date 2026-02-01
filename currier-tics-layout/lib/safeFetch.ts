@@ -6,40 +6,37 @@
  */
 export async function safeFetch(url: string, options?: RequestInit): Promise<any> {
   try {
+    console.log(`📡 safeFetch iniciando: ${url}`);
     const response = await fetch(url, options);
     
-    // Obtener el texto primero para evitar "Unexpected end of JSON input"
-    const text = await response.text();
+    console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     
-    // Si está vacío, retornar objeto vacío o error según status
+    // Verificar status HTTP primero
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`❌ Fetch error ${response.status}: ${text.substring(0, 200)}`);
+      throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+    }
+    
+    // Obtener el texto para validar
+    const text = await response.text();
+    console.log(`📡 Response text length: ${text.length} chars`);
+    
+    // Si está vacío, retornar array vacío (para endpoints que retornan listas)
     if (!text || text.trim() === "") {
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: Respuesta vacía del servidor`);
-      }
-      return {};
+      console.warn(`⚠️ Respuesta vacía de ${url}`);
+      return [];
     }
     
     // Intentar parsear JSON
     try {
       const data = JSON.parse(text);
-      
-      // Si la respuesta no es OK, lanzar error con el mensaje del backend
-      if (!response.ok) {
-        const errorMessage = data.message || data.error || `Error ${response.status}`;
-        throw new Error(errorMessage);
-      }
-      
+      console.log(`✅ JSON parseado exitosamente de ${url}`);
       return data;
     } catch (parseError) {
       console.error("❌ Error parseando JSON:", parseError);
-      console.error("📄 Texto recibido:", text);
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${text.substring(0, 100)}`);
-      }
-      
-      // Si el status es OK pero no es JSON válido, retornar objeto vacío
-      return {};
+      console.error("📄 Texto recibido:", text.substring(0, 500));
+      throw new Error(`JSON parse error: ${text.substring(0, 100)}`);
     }
   } catch (error) {
     console.error("❌ Error en safeFetch:", error);
