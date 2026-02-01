@@ -5,7 +5,6 @@ import {
   Text,
   View,
   StyleSheet,
-  Font,
 } from "@react-pdf/renderer"
 
 interface Envio {
@@ -28,26 +27,22 @@ interface ShippingLabelProps {
   envio: Envio
 }
 
-// Estilos para el PDF (4x6 pulgadas = 288x432 puntos)
+// Estilos seguros y básicos
 const styles = StyleSheet.create({
   page: {
-    width: 288,
-    height: 432,
-    padding: 12,
-    backgroundColor: "#ffffff",
+    padding: 30,
+    fontSize: 12,
     fontFamily: "Helvetica",
+    backgroundColor: "#ffffff",
   },
   header: {
-    borderBottom: 3,
-    borderBottomColor: "#000000",
-    paddingBottom: 8,
-    marginBottom: 8,
+    marginBottom: 20,
+    borderBottom: "2px solid #000000",
+    paddingBottom: 10,
   },
   logo: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 2,
   },
   title: {
     fontSize: 10,
@@ -132,109 +127,64 @@ const styles = StyleSheet.create({
   },
 })
 
-export const ShippingLabel: React.FC<ShippingLabelProps> = ({ envio }) => {
+export default function ShippingLabel({ envio }: ShippingLabelProps) {
+  // Protección contra datos nulos
+  if (!envio) {
+    return (
+      <Document>
+        <Page style={styles.page}>
+          <Text>No hay datos del envío disponibles</Text>
+        </Page>
+      </Document>
+    )
+  }
+
   const trackingNumber = envio.numeroTracking || `NAC-${String(envio.id || "000").padStart(6, "0")}`
   const remitenteNombre = envio.usuario?.nombre || "Remitente"
-  const destinatarioNombre = "Destinatario Final"
   const ciudad = envio.ciudad || "Destino"
   const direccion = envio.direccion || "Dirección Principal"
-  const descripcion = envio.descripcion || "Paquete estándar"
+  const descripcion = envio.descripcion || "Paquete"
   const peso = envio.pesoLibras || 0
-  const fechaCreacion = envio.fechaCreacion
-    ? new Date(envio.fechaCreacion).toLocaleDateString("es-EC", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      })
-    : new Date().toLocaleDateString("es-EC")
 
   return (
     <Document>
-      <Page size={[288, 432]} style={styles.page}>
-        {/* HEADER */}
+      <Page size="A4" style={styles.page}>
+        {/* CABECERA */}
         <View style={styles.header}>
-          <Text style={styles.logo}>🚚 COURRIER TICS</Text>
+          <Text style={styles.logo}>COURRIER TICS</Text>
           <Text style={styles.title}>GUÍA DE REMISIÓN</Text>
         </View>
 
-        {/* TRACKING NUMBER */}
-        <View style={styles.trackingSection}>
-          <Text style={styles.trackingLabel}>NÚMERO DE GUÍA</Text>
-          <Text style={styles.trackingNumber}>{trackingNumber}</Text>
-          {/* Código de barras simulado con líneas */}
-          <View style={styles.barcodeLines}>
-            {Array.from({ length: 20 }).map((_, i) => (
-              <View
-                key={i}
-                style={{
-                  ...styles.barcodeLine,
-                  width: i % 3 === 0 ? 4 : 2,
-                }}
-              />
-            ))}
-          </View>
+        {/* TRACKING NÚMERO - PROMINENTE */}
+        <View style={{ fontSize: 28, fontWeight: "bold", textAlign: "center", margin: 20, padding: 15, border: "2px solid #000000" }}>
+          <Text>{trackingNumber}</Text>
         </View>
 
-        {/* REMITENTE (FROM) */}
+        {/* SECCIÓN ORIGEN */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>📤 FROM / REMITENTE</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Nombre:</Text>
-            <Text style={styles.value}>{remitenteNombre}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Origen:</Text>
-            <Text style={styles.value}>Ecuador</Text>
-          </View>
+          <Text style={styles.label}>REMITENTE (FROM):</Text>
+          <Text style={styles.value}>{remitenteNombre}</Text>
+          <Text style={styles.value}>Ecuador</Text>
         </View>
 
-        {/* DESTINATARIO (TO) */}
+        {/* SECCIÓN DESTINO */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>📥 TO / DESTINATARIO</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Nombre:</Text>
-            <Text style={styles.value}>{destinatarioNombre}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Ciudad:</Text>
-            <Text style={styles.value}>{ciudad}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Dirección:</Text>
-            <Text style={styles.value}>{direccion}</Text>
-          </View>
+          <Text style={styles.label}>DESTINO (TO):</Text>
+          <Text style={styles.value}>{ciudad}</Text>
+          <Text style={styles.value}>{direccion}</Text>
         </View>
 
-        {/* DETALLES DEL ENVÍO */}
+        {/* DETALLES */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeader}>📦 DETALLES DEL ENVÍO</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Descripción:</Text>
-            <Text style={styles.value}>{descripcion}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Peso:</Text>
-            <Text style={styles.value}>{peso.toFixed(2)} lb</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Fecha:</Text>
-            <Text style={styles.value}>{fechaCreacion}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Estado:</Text>
-            <Text style={styles.value}>{envio.estado || "PENDIENTE"}</Text>
-          </View>
+          <Text style={styles.label}>DETALLE DEL ENVÍO:</Text>
+          <Text style={styles.value}>{descripcion}</Text>
+          <Text style={styles.value}>Peso: {peso} lb</Text>
         </View>
 
         {/* FOOTER */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            www.courriertics.com | Servicio de envíos nacionales e internacionales
-          </Text>
-          <Text style={styles.footerText}>
-            ⚠ Conserve esta guía hasta la entrega del paquete
-          </Text>
-        </View>
+        <Text style={{ position: "absolute", bottom: 30, left: 30, fontSize: 8, color: "#aaa" }}>
+          Generado el: {new Date().toLocaleDateString()}
+        </Text>
       </Page>
     </Document>
   )

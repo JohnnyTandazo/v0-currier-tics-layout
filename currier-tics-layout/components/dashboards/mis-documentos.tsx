@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Package, Truck, Printer, FileText, Loader2, Eye } from "lucide-react"
 import { PDFDownloadLink } from "@react-pdf/renderer"
-import { ShippingLabel } from "@/components/pdf/shipping-label"
+import ShippingLabel from "@/components/pdf/shipping-label"
 import { PDFPreviewModal } from "@/components/pdf/pdf-preview-modal"
 
 export default function MisDocumentos() {
