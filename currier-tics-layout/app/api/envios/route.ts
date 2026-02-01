@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     // ✅ PROXY AL BACKEND JAVA
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/envios`;
+    const endpoint = `${backendUrl}/api/envios`;
 
     console.log("🌐 [API PROXY] Conectando con backend Java:", endpoint);
 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     console.log("📋 [API] Datos del nuevo envío:", body);
 
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-    const endpoint = `${backendUrl}/envios`;
+    const endpoint = `${backendUrl}/api/envios`;
 
     const response = await fetch(endpoint, {
       method: "POST",
