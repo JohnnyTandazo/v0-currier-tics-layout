@@ -77,6 +77,10 @@ export function OperatorDashboard() {
   const [pagosPendientes, setPagosPendientes] = useState<any[]>([])
   const [todosPaquetes, setTodosPaquetes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("TODOS")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("TODOS")
 
   const handleSearch = async () => {
     if (!trackingNumber) return
@@ -346,7 +350,33 @@ export function OperatorDashboard() {
     return "INTERNACIONAL"
   }
 
-  // ✅ CARGAR AL MONTAR
+  // ✅ LÓGICA DE FILTRADO DE PAQUETES
+  const paquetesFiltrados = todosPaquetes.filter((pkg) => {
+    const tracking = (pkg.trackingNumber || pkg.tracking || "").toString().toLowerCase()
+    const cliente = (pkg.usuario?.nombre || pkg.cliente || "").toString().toLowerCase()
+    const estado = (pkg.estado || "").toString().toUpperCase()
+    const search = searchTerm.toLowerCase()
+    
+    const matchSearch = tracking.includes(search) || cliente.includes(search)
+    const matchStatus = statusFilter === "TODOS" || estado === statusFilter
+    
+    return matchSearch && matchStatus
+  })
+
+  // ✅ LÓGICA DE FILTRADO
+  const paquetesFiltrados = todosPaquetes.filter((pkg) => {
+    const tracking = (pkg.trackingNumber || pkg.tracking || "").toString().toLowerCase()
+    const cliente = (pkg.usuario?.nombre || pkg.cliente || "").toString().toLowerCase()
+    const estado = (pkg.estado || "").toString().toUpperCase()
+    const search = searchTerm.toLowerCase()
+    
+    const matchSearch = tracking.includes(search) || cliente.includes(search)
+    const matchStatus = statusFilter === "TODOS" || estado === statusFilter
+    
+    return matchSearch && matchStatus
+  })
+
+  // ✅ OPCIONES DE ESTADO PARA FILTRO
   useEffect(() => {
     cargarDatos()
   }, [])
@@ -789,7 +819,46 @@ export function OperatorDashboard() {
           ) : todosPaquetes.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No hay paquetes registrados</p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              {/* BARRA DE FILTROS Y BÚSQUEDA */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-6 items-start sm:items-center">
+                {/* Input de Búsqueda (Izquierda) */}
+                <div className="flex-1 w-full">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Buscar por Tracking o Cliente..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 bg-background/50 border-border/50"
+                    />
+                  </div>
+                </div>
+                
+                {/* Selector de Estado (Derecha) */}
+                <div className="w-full sm:w-auto">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="bg-background/50 border-border/50 w-full">
+                      <SelectValue placeholder="Filtrar por estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TODOS">Todos los Estados</SelectItem>
+                      <SelectItem value="PRE_ALERTADO">Pre-Alertado</SelectItem>
+                      <SelectItem value="EN_MIAMI">En Miami</SelectItem>
+                      <SelectItem value="EN_TRANSITO">En Tránsito</SelectItem>
+                      <SelectItem value="ADUANA">Aduana</SelectItem>
+                      <SelectItem value="ENTREGADO">Entregado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* TABLA CON PAQUETES FILTRADOS */}
+              <div className="overflow-x-auto">
+                {paquetesFiltrados.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No se encontraron paquetes con esos criterios</p>
+                ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -802,7 +871,7 @@ export function OperatorDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {todosPaquetes.map((pkg) => {
+                  {paquetesFiltrados.map((pkg) => {
                     const tracking = pkg.trackingNumber || pkg.tracking || "-"
                     const tipo = deducirTipo(tracking)
                     return (
@@ -841,7 +910,9 @@ export function OperatorDashboard() {
                   })}
                 </TableBody>
               </Table>
-            </div>
+                )}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
