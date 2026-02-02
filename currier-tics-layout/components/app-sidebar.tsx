@@ -58,10 +58,9 @@ const clientNavItems = [
 ]
 
 const operatorNavItems = [
-  { title: "Recepción", icon: Warehouse, badge: null },
-  { title: "Inventario", icon: ClipboardList, badge: "47" },
-  { title: "Incidencias", icon: AlertTriangle, badge: "2" },
-  { title: "Despacho", icon: Truck, badge: null },
+  { title: "Panel de Control", icon: Home, badge: null },
+  // Anteriormente había: Recepción, Inventario, Incidencias, Despacho
+  // Fueron eliminados para mantener la interfaz limpia y enfocada
 ]
 
 const trackingNavItems = [
@@ -219,37 +218,40 @@ export function AppSidebar({ user, currentRole, currentClientView, onRoleChange,
 
         <SidebarSeparator />
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Acciones Rápidas</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={currentRole === "client" && currentClientView === "notificaciones"}
-                  onClick={() => handleMenuClick("Notificaciones")}
-                >
-                  <Bell className="h-4 w-4" />
-                  <span>Notificaciones</span>
-                  <Badge
-                    variant="destructive"
-                    className="ml-auto text-xs"
+        {/* Acciones Rápidas - Solo para cliente, no para operador */}
+        {currentRole === "client" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Acciones Rápidas</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    isActive={currentRole === "client" && currentClientView === "notificaciones"}
+                    onClick={() => handleMenuClick("Notificaciones")}
                   >
-                    5
-                  </Badge>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={currentRole === "client" && currentClientView === "configuracion"}
-                  onClick={() => handleMenuClick("Configuración")}
-                >
-                  <Settings className="h-4 w-4" />
-                  <span>Configuración</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                    <Bell className="h-4 w-4" />
+                    <span>Notificaciones</span>
+                    <Badge
+                      variant="destructive"
+                      className="ml-auto text-xs"
+                    >
+                      5
+                    </Badge>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    isActive={currentRole === "client" && currentClientView === "configuracion"}
+                    onClick={() => handleMenuClick("Configuración")}
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Configuración</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-4 space-y-3">
