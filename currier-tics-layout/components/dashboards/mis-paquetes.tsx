@@ -39,26 +39,43 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
 
-  // Función para deducir el tipo de paquete basándose en el tracking
-  const deducirTipo = (tracking: string): "NACIONAL" | "INTERNACIONAL" => {
+  // Función para detectar si la descripción contiene palabras clave de envío nacional
+  const contieneKeywordNacional = (descripcion: string): boolean => {
+    const keywordsNacionales = ["quito", "guayaquil", "cuenca", "ambato", "riobamba", "latacunga", "puyo", "machala", "manta", "santo domingo", "esmeraldas"]
+    const descLower = descripcion.toLowerCase()
+    return keywordsNacionales.some(keyword => descLower.includes(keyword))
+  }
+
+  // Función para deducir el tipo de paquete basándose en el tracking y descripción
+  const deducirTipo = (tracking: string, descripcion: string = ""): "NACIONAL" | "INTERNACIONAL" => {
     const trackingUpper = tracking.toUpperCase()
     
-    // Nacional: starts with NAC-, TRK
-    if (trackingUpper.startsWith("NAC-") || trackingUpper.startsWith("TRK")) {
+    // NACIONALES: NAC-, SERVI-, TRANS- (prefijos de compañías nacionales)
+    if (trackingUpper.startsWith("NAC-") || trackingUpper.startsWith("SERVI-") || trackingUpper.startsWith("TRANS-")) {
       return "NACIONAL"
     }
     
-    // Internacional: starts with USA- o solo números
-    if (trackingUpper.startsWith("USA-") || /^\d+$/.test(tracking)) {
+    // NACIONALES: Si tiene keyword en descripción (ej: Quito, Guayaquil)
+    if (contieneKeywordNacional(descripcion)) {
+      return "NACIONAL"
+    }
+    
+    // INTERNACIONALES: USA-, TBA-, AMZN- (prefijos de compañías internacionales)
+    if (trackingUpper.startsWith("USA-") || trackingUpper.startsWith("TBA-") || trackingUpper.startsWith("AMZN-")) {
       return "INTERNACIONAL"
     }
     
-    // Default: Internacional si tiene prefijo USA o empieza con número
-    if (/^\d/.test(tracking)) {
+    // INTERNACIONALES: Formato numérico largo (típico de tracking gringo)
+    if (/^\d{10,}$/.test(tracking)) {
       return "INTERNACIONAL"
     }
     
-    // Si no coincide con ninguno, asumir INTERNACIONAL
+    // INTERNACIONALES: Empieza con números pero no es keyword nacional
+    if (/^\d/.test(tracking) && !contieneKeywordNacional(descripcion)) {
+      return "INTERNACIONAL"
+    }
+    
+    // Default: Internacional si no coincide con patrones nacionales
     return "INTERNACIONAL"
   }
 
@@ -101,9 +118,24 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
         const data = JSON.parse(text)
         const paquetesConTipo = (Array.isArray(data) ? data : []).map((pkg: Paquete) => ({
           ...pkg,
-          tipoDeducido: deducirTipo(pkg.trackingNumber)
+          tipoDeducido: deducirTipo(pkg.trackingNumber, pkg.descripcion)
         }))
-        setPaquetes(paquetesConTipo)
+        
+        // ✅ PAQUETE FICTICIO TEMPORAL PARA PRUEBAS
+        const paqueteTest: Paquete = {
+          id: 9999,
+          trackingNumber: "SERVI-12345",
+          descripcion: "Paquete de prueba desde Quito",
+          pesoLibras: 2.5,
+          estado: "EN_TRANSITO",
+          tipo_envio: "NACIONAL",
+          usuarioId: 1,
+          tipoDeducido: "NACIONAL"
+        }
+        
+        // Agregar paquete de prueba si no hay muchos datos
+        const paquetesFinales = paquetesConTipo.length === 0 ? [paqueteTest, ...paquetesConTipo] : paquetesConTipo
+        setPaquetes(paquetesFinales)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         setError(errorMessage)
