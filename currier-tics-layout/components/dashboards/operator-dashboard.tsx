@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Search,
   Package,
@@ -11,7 +11,20 @@ import {
   FileWarning,
   Send,
   RefreshCw,
+  Check,
+  Edit,
+  Plane,
+  Truck,
+  DollarSign as DollarIcon,
 } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,6 +71,11 @@ export function OperatorDashboard() {
   const [statusTrackingNumber, setStatusTrackingNumber] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("")
   const [statusUpdateSuccess, setStatusUpdateSuccess] = useState(false)
+
+  // ✅ NUEVOS ESTADOS PARA GESTIÓN
+  const [pagosPendientes, setPagosPendientes] = useState<any[]>([])
+  const [todosPaquetes, setTodosPaquetes] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   const handleSearch = async () => {
     if (!trackingNumber) return
@@ -224,11 +242,110 @@ export function OperatorDashboard() {
       alert("Detalles actualizados correctamente")
       setStatusTrackingNumber("")
       setSelectedStatus("")
+      
+      // Recargar datos
+      await cargarDatos()
     } catch (error) {
       console.error("Error actualizando detalles:", error)
       alert("No se pudo actualizar los detalles. Revisa la consola.")
     }
   }
+
+  // ✅ CARGAR DATOS INICIALES
+  const cargarDatos = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl) return
+
+      // Cargar todos los paquetes
+      const resPaquetes = await fetch(`${apiUrl}/api/paquetes`)
+      if (resPaquetes.ok) {
+        const paquetes = await resPaquetes.json()
+        setTodosPaquetes(Array.isArray(paquetes) ? paquetes : [])
+      }
+
+      // Cargar pagos pendientes
+      const resPagos = await fetch(`${apiUrl}/api/pagos`)
+      if (resPagos.ok) {
+        const text = await resPagos.text()
+        if (text && text.trim() !== "") {
+          const pagos = JSON.parse(text)
+          const pendientes = Array.isArray(pagos) 
+            ? pagos.filter((p: any) => p.estado === "PENDIENTE") 
+            : []
+          setPagosPendientes(pendientes)
+        }
+      }
+    } catch (err) {
+      console.error("Error cargando datos:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ✅ CONFIRMAR PAGO
+  const confirmarPago = async (pagoId: number) => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL
+      if (!apiUrl) return
+
+      const response = await fetch(`${apiUrl}/api/pagos/${pagoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estado: "APROBADO" })
+      })
+
+      if (response.ok) {
+        alert("✅ Pago aprobado exitosamente")
+        await cargarDatos()
+      } else {
+        alert("❌ Error al aprobar el pago")
+      }
+    } catch (err) {
+      console.error("Error confirmando pago:", err)
+      alert("❌ Error de conexión al aprobar pago")
+    }
+  }
+
+  // ✅ EDITAR PAQUETE DESDE TABLA
+  const editarPaquete = (paquete: any) => {
+    setPackageFound({
+      id: paquete.id,
+      trackingId: paquete.trackingNumber || paquete.tracking,
+      description: paquete.descripcion,
+      customer: paquete.usuario?.nombre || "-",
+      status: paquete.estado,
+      prealerted: true,
+    })
+    setTrackingNumber(paquete.trackingNumber || paquete.tracking || "")
+    setStatusTrackingNumber(paquete.trackingNumber || paquete.tracking || "")
+    const libras = paquete.pesoLibras || 0
+    setWeightLb(libras > 0 ? String(libras) : "")
+    setWeightKg(libras > 0 ? (libras / 2.20462).toFixed(2) : "")
+    setPrice(paquete.precio || 0)
+    setCategory(paquete.categoria || null)
+    setSelectedStatus(paquete.estado || "")
+    
+    // Scroll al formulario
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // ✅ DEDUCIR TIPO DE PAQUETE
+  const deducirTipo = (tracking: string): "NACIONAL" | "INTERNACIONAL" => {
+    const trackingUpper = tracking.toUpperCase()
+    if (trackingUpper.startsWith("NAC-") || trackingUpper.startsWith("SERVI-") || trackingUpper.startsWith("TRK-")) {
+      return "NACIONAL"
+    }
+    if (trackingUpper.startsWith("USA-") || trackingUpper.startsWith("TBA-") || /^\d{10,}$/.test(tracking)) {
+      return "INTERNACIONAL"
+    }
+    return "INTERNACIONAL"
+  }
+
+  // ✅ CARGAR AL MONTAR
+  useEffect(() => {
+    cargarDatos()
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -578,6 +695,136 @@ export function OperatorDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ✅ SECCIÓN NUEVA: PAGOS POR VALIDAR */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarIcon className="h-5 w-5 text-green-600" />
+            Pagos por Validar (El Cajero)
+          </CardTitle>
+          <CardDescription>
+            Aprueba los pagos pendientes de verificación
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-muted-foreground text-center py-4">Cargando...</p>
+          ) : pagosPendientes.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No hay pagos pendientes de validación</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Monto</TableHead>
+                  <TableHead>Método</TableHead>
+                  <TableHead>Referencia</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead className="text-right">Acción</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pagosPendientes.map((pago) => (
+                  <TableRow key={pago.id}>
+                    <TableCell className="font-mono text-sm">{pago.id}</TableCell>
+                    <TableCell className="font-semibold">${(pago.monto || 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-xs">{pago.metodoPago || "-"}</TableCell>
+                    <TableCell className="font-mono text-xs">{pago.referencia || "-"}</TableCell>
+                    <TableCell className="text-xs">
+                      {pago.fecha ? new Date(pago.fecha).toLocaleDateString("es-EC") : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => confirmarPago(pago.id)}
+                      >
+                        <Check className="mr-1 h-3 w-3" />
+                        Confirmar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ✅ SECCIÓN NUEVA: BANDEJA DE ENTRADA GLOBAL */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-blue-600" />
+            Todos los Paquetes (Torre de Control)
+          </CardTitle>
+          <CardDescription>
+            Gestiona todos los paquetes en el sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-muted-foreground text-center py-4">Cargando...</p>
+          ) : todosPaquetes.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No hay paquetes registrados</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Tracking</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Estado Actual</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {todosPaquetes.map((pkg) => {
+                    const tracking = pkg.trackingNumber || pkg.tracking || "-"
+                    const tipo = deducirTipo(tracking)
+                    return (
+                      <TableRow key={pkg.id}>
+                        <TableCell className="font-mono text-sm">{pkg.id}</TableCell>
+                        <TableCell className="font-mono text-sm font-medium">{tracking}</TableCell>
+                        <TableCell className="text-sm">{pkg.usuario?.nombre || pkg.cliente || "-"}</TableCell>
+                        <TableCell>
+                          {tipo === "NACIONAL" ? (
+                            <Badge className="bg-green-600 text-white gap-1">
+                              <Truck className="h-3 w-3" />
+                              Nacional
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-blue-600 text-white gap-1">
+                              <Plane className="h-3 w-3" />
+                              Internacional
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{pkg.estado || "SIN_ESTADO"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => editarPaquete(pkg)}
+                          >
+                            <Edit className="mr-1 h-3 w-3" />
+                            Editar
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
