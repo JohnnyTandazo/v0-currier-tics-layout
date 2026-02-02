@@ -133,25 +133,26 @@ export function Pagos() {
 
     const fetchData = async () => {
       try {
-        // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
-        const cleanId = usuario.id.toString().split(':')[0].trim()
-        console.log("🛠️ Limpiando ID corrupto:", usuario.id, "-> ID Final:", cleanId)
+        // ✅ SANITIZACIÓN ROBUSTA DEL ID: Extraer antes del : (1:1 → 1)
+        const idLimpio = String(usuario.id).split(':')[0].trim()
+        console.log("🛠️ Sanitizando ID:", usuario.id, "-> ID Limpio:", idLimpio)
         
-        // ✅ VALIDAR que el ID sea un número válido
-        if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
-          console.error(`❌ ID inválido después de limpiar: ${cleanId}`)
+        // ✅ VALIDACIÓN ESTRICTA: Bloquear peticiones si el ID no es numérico válido
+        if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
+          console.error(`❌ BLOQUEADO: ID inválido o no numérico: "${idLimpio}"`)
+          console.error("   Esto previene error 404 y respuestas HTML del backend")
           setLoading(false)
           return
         }
         
-        console.log(`✅ Usuario autenticado: ID limpio verificado: ${cleanId}`)
+        console.log(`✅ ID validado y sanitizado: ${idLimpio} (tipo numérico confirmado)`)
         
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
         console.log("🌐 API URL base:", apiUrl)
 
-        // Fetch facturas pendientes
+        // Fetch facturas pendientes con ID sanitizado
         try {
-          const urlFacturas = `${apiUrl}/api/facturas/usuario/${cleanId}`
+          const urlFacturas = `${apiUrl}/api/facturas/usuario/${idLimpio}`
           console.log("📍 URL FINAL FACTURAS:", urlFacturas)
           console.log("📍 URL completa:", urlFacturas)
           
@@ -203,7 +204,7 @@ export function Pagos() {
 
         // Fetch pagos recientes
         try {
-          const urlPagos = `${apiUrl}/api/pagos?usuarioId=${cleanId}`
+          const urlPagos = `${apiUrl}/api/pagos?usuarioId=${idLimpio}`
           console.log("📍 URL FINAL PAGOS:", urlPagos)
           const resPagos = await fetch(urlPagos)
           if (resPagos.ok) {
@@ -219,7 +220,7 @@ export function Pagos() {
                   console.log("✅ Pagos recientes cargados:", data.length)
                   // El backend ya filtra por usuarioId, pero hacemos validación adicional
                   const misPagos = data.filter(
-                    (p: PagoReciente) => String(p.usuarioId) === String(cleanId)
+                    (p: PagoReciente) => String(p.usuarioId) === String(idLimpio)
                   )
                   console.log("✅ Pagos filtrados:", misPagos.length)
                   setPagosRecientes(misPagos)
@@ -311,11 +312,11 @@ export function Pagos() {
 
         // Reload data from API
         setTimeout(async () => {
-          // ✅ USAR ID LIMPIO EN REFETCH
-          const cleanId = usuario.id.toString().split(':')[0].trim()
+          // ✅ SANITIZAR ID EN REFETCH
+          const idLimpio = String(usuario.id).split(':')[0].trim()
           
           // Refetch facturas pendientes
-          const resFacturas = await fetch(`${apiUrl}/api/facturas/usuario/${cleanId}`)
+          const resFacturas = await fetch(`${apiUrl}/api/facturas/usuario/${idLimpio}`)
           if (resFacturas.ok) {
             const text = await resFacturas.text()
             if (text && text.trim() !== "" && !text.includes("<")) {
@@ -334,7 +335,7 @@ export function Pagos() {
           }
 
           // Refetch pagos recientes
-          const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${cleanId}`)
+          const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${idLimpio}`)
           if (resPagos.ok) {
             const text = await resPagos.text()
             if (text && text.trim() !== "" && !text.includes("<")) {
@@ -342,7 +343,7 @@ export function Pagos() {
                 const data = JSON.parse(text)
                 if (Array.isArray(data)) {
                   const misPagos = data.filter(
-                    (p: PagoReciente) => String(p.usuarioId) === String(cleanId)
+                    (p: PagoReciente) => String(p.usuarioId) === String(idLimpio)
                   )
                   setPagosRecientes(misPagos)
                 }

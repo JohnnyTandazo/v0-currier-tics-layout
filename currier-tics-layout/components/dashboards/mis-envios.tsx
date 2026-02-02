@@ -169,28 +169,29 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           return
         }
 
-        // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
-        const cleanId = usuario.id.toString().split(':')[0].trim()
-        console.log("🛠️ Limpiando ID corrupto:", usuario.id, "-> ID Final:", cleanId)
+        // ✅ SANITIZACIÓN ROBUSTA DEL ID: Extraer antes del : (1:1 → 1)
+        const idLimpio = String(usuarioStored.id).split(':')[0].trim()
+        console.log("🛠️ Sanitizando ID:", usuarioStored.id, "-> ID Limpio:", idLimpio)
         
-        // ✅ VALIDAR que el ID sea un número válido
-        if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
-          console.error(`❌ ID inválido después de limpiar: ${cleanId}`)
+        // ✅ VALIDACIÓN ESTRICTA: Bloquear peticiones si el ID no es numérico válido
+        if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
+          console.error(`❌ BLOQUEADO: ID inválido o no numérico: "${idLimpio}"`)
+          console.error("   Esto previene error 404 y respuestas HTML del backend")
           setUsuario(null)
           setEnvios([])
-          setError("Sesión inválida - ID de usuario corrupto")
+          setError("Sesión inválida - ID de usuario corrupto. Por favor, vuelve a iniciar sesión.")
           setIsLoading(false)
           return
         }
         
-        console.log(`✅ Usuario autenticado: ID limpio verificado: ${cleanId}`)
+        console.log(`✅ ID validado y sanitizado: ${idLimpio} (tipo numérico confirmado)`)
         
         setUsuario(usuarioStored)
         
-        // ✅ CONSTRUIR URLs CON ID LIMPIO
+        // ✅ URLs con ID sanitizado
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
-        const url = `${apiUrl}/api/envios/usuario/${cleanId}`
-        const facturasUrl = `${apiUrl}/api/facturas/usuario/${cleanId}`
+        const url = `${apiUrl}/api/envios/usuario/${idLimpio}`
+        const facturasUrl = `${apiUrl}/api/facturas/usuario/${idLimpio}`
         
         console.log(`📡 URL FINAL ENVIOS: ${url}`)
         console.log(`📡 URL FINAL FACTURAS: ${facturasUrl}`)
@@ -309,10 +310,10 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
 
         console.log("✅ ENVÍOS NORMALIZADOS (primero):", normalizedEnvios[0])
 
-        // FILTRADO ESTRICTO por usuario
+        // FILTRADO ESTRICTO por usuario con ID sanitizado
         const misEnvios = normalizedEnvios.filter((p: Envio) => {
-          const myUserId = usuarioStored.id
-          return String(p.usuarioId) === String(myUserId)
+          // Usar ID limpio para comparación consistente
+          return String(p.usuarioId) === String(idLimpio)
         })
 
         console.log("ENVÍOS FILTRADOS:", misEnvios.length, "registros")
