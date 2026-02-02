@@ -100,7 +100,10 @@ export default function DashboardLayout({
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
           {currentRole === "client" && currentClientView === "dashboard" && (
-            <ClientDashboard onViewTracking={onViewTracking} />
+            <ClientDashboard 
+              onViewTracking={onViewTracking}
+              onClientViewChange={onClientViewChange}
+            />
           )}
           {currentRole === "client" && currentClientView === "envios" && (
             <MisEnvios onViewDetails={onViewEnvioDetails} />

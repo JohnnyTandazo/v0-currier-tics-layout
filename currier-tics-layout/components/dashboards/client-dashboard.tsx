@@ -57,10 +57,11 @@ interface Usuario {
 }
 
 interface ClientDashboardProps {
-  onViewTracking: (trackingId: string) => void
+  onViewTracking: (trackingId: string) => void;
+  onClientViewChange: (view: "dashboard" | "envios" | "facturas" | "paquetes" | "pagos" | "notificaciones" | "configuracion") => void;
 }
 
-export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
+export function ClientDashboard({ onViewTracking, onClientViewChange }: ClientDashboardProps) {
   const router = useRouter()
   const [isPreAlertOpen, setIsPreAlertOpen] = useState(false)
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
@@ -219,9 +220,9 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
     }
   }
 
-  // Función para manejar pago - Redirigir a Facturas
+  // Función para manejar pago - Cambiar a vista de Pagos
   const handlePagar = (paqueteId: number) => {
-    router.push(`/dashboard/facturas?action=pagar&id=${paqueteId}`)
+    onClientViewChange("pagos")
   }
 
   // Verificar si debe mostrar botón de pagar
