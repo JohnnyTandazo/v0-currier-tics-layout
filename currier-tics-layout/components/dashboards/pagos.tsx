@@ -105,57 +105,33 @@ export function Pagos() {
   })
 
   const fetchPagosRecientes = async (apiUrl: string, usuarioId: string) => {
-    const endpoints = [
-      `${apiUrl}/api/pagos?usuarioId=${usuarioId}`,
-      `${apiUrl}/api/pagos/usuario/${usuarioId}`,
-    ]
-
-    for (const endpoint of endpoints) {
-      console.log("📍 [PAGOS] Intentando endpoint:", endpoint)
+    try {
+      const endpoint = `${apiUrl}/api/pagos?usuarioId=${usuarioId}`
       const response = await fetch(endpoint)
-      console.log("📊 [PAGOS] Response status:", response.status, response.statusText)
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error("❌ [PAGOS] Error HTTP al cargar pagos:", response.status)
-        console.error("❌ [PAGOS] Error body (primeros 200 chars):", errorText.substring(0, 200))
-        continue
+        setPagosRecientes([])
+        return
       }
 
       const text = await response.text()
       if (!text || text.trim() === "") {
-        console.warn("⚠️ Respuesta de pagos vacía")
-        continue
+        setPagosRecientes([])
+        return
       }
 
-      try {
-        const data = JSON.parse(text)
-        console.log("📦 JSON parseado de pagos:", data)
-        console.log("📊 Tipo:", typeof data, "Es array:", Array.isArray(data))
+      const data = JSON.parse(text)
+      console.log("PAGOS RECUPERADOS:", data)
 
-        if (Array.isArray(data)) {
-          console.log("✅ Es array, total elementos:", data.length)
-          console.log("📋 Elementos completos:", JSON.stringify(data, null, 2))
-          console.log("✅ Pagos recibidos para usuario", usuarioId, ":", data.length)
-          console.log("PAGO REAL:", data[0])
-
-          if (data.length > 0) {
-            setPagosRecientes(data)
-            return
-          }
-        } else {
-          console.warn("⚠️ Respuesta de pagos no es array:", data)
-        }
-      } catch (parseErr) {
-        console.error("❌ Error parseando pagos JSON:", parseErr)
-        console.error("📄 Respuesta recibida (primeros 500 chars):", text.substring(0, 500))
-        if (text.includes("<")) {
-          console.error("❌ Parece ser HTML error del servidor, no JSON válido")
-        }
+      if (Array.isArray(data) && data.length > 0) {
+        setPagosRecientes(data)
+        return
       }
+
+      setPagosRecientes([])
+    } catch (err) {
+      setPagosRecientes([])
     }
-
-    setPagosRecientes([])
   }
 
   // Obtener usuario del localStorage
@@ -178,22 +154,19 @@ export function Pagos() {
     }
   }, [])
 
+  const usuarioId = usuario?.id ? String(usuario.id).split(":")[0].trim() : ""
+
   // Fetch pagos SOLO si hay usuario.id válido
   useEffect(() => {
-    if (!usuario || !usuario.id) {
-      console.log("⚠️ No hay usuario logueado o no tiene ID")
+    if (!usuarioId) {
       setLoading(false)
       return
     }
 
-    console.log("👤 Usuario detectado:", JSON.stringify(usuario, null, 2))
-
     const fetchData = async () => {
       try {
         // ✅ SANITIZACIÓN: Usar split(':')[0] para obtener solo la parte numérica
-        const idLimpio = String(usuario.id).split(':')[0].trim()
-        console.log("🛠️ [PAGOS] Sanitizando ID:", usuario.id, "-> ID Limpio:", idLimpio)
-        console.log("🔍 [PAGOS] Verificación: ID contiene ':' ?", String(usuario.id).includes(':'))
+        const idLimpio = usuarioId
         
         // ✅ VALIDACIÓN ESTRICTA: Bloquear peticiones si el ID no es numérico válido
         if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
@@ -268,13 +241,7 @@ export function Pagos() {
         }
 
         // Fetch pagos recientes
-        try {
-          const usuarioIdPagos = "1"
-          await fetchPagosRecientes(apiUrl, usuarioIdPagos)
-        } catch (err) {
-          console.error("❌ Error fetching pagos:", err)
-          setPagosRecientes([])
-        }
+        await fetchPagosRecientes(apiUrl, "1")
       } catch (err) {
         console.error("Error fetching data:", err)
       } finally {
@@ -283,7 +250,7 @@ export function Pagos() {
     }
 
     fetchData()
-  }, [usuario])
+  }, [usuarioId])
 
   const handleFormChange = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -363,9 +330,7 @@ export function Pagos() {
           }
 
           // Refetch pagos recientes
-          const usuarioIdPagos = "1"
-          console.log("🔄 [REFETCH] GET /api/pagos?usuarioId=", usuarioIdPagos)
-          await fetchPagosRecientes(apiUrl, usuarioIdPagos)
+          await fetchPagosRecientes(apiUrl, "1")
 
           setSubmitSuccess(false)
           router.refresh()
@@ -458,7 +423,6 @@ export function Pagos() {
     )
   }
 
-  console.log("DATOS PARA TABLA:", pagosRecientes)
 
   return (
     <div className="space-y-6">
