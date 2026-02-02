@@ -249,9 +249,8 @@ export function Pagos() {
                   if (Array.isArray(data)) {
                     console.log("✅ Es array, total elementos:", data.length)
                     console.log("📋 Elementos completos:", JSON.stringify(data, null, 2))
-                    
-                    // El backend ya filtra por usuarioId=1, mostrar directamente
                     console.log("✅ Pagos recibidos para usuario", usuarioIdPagos, ":", data.length)
+                    console.log("🔍 Estructura del primer pago recibido:", data[0])
                     setPagosRecientes(data)
                   } else {
                     console.warn("⚠️ Respuesta de pagos no es array:", data)
@@ -377,6 +376,7 @@ export function Pagos() {
                 if (Array.isArray(data)) {
                   console.log("✅ [REFETCH] Pagos en array:", data.length)
                   console.log("✅ [REFETCH] Pagos recibidos para usuario", usuarioIdPagos, ":", data.length)
+                  console.log("🔍 [REFETCH] Estructura del primer pago recibido:", data[0])
                   setPagosRecientes(data)
                 }
               } catch (err) {
@@ -759,28 +759,24 @@ export function Pagos() {
                 {pagosRecientes.map((pago) => {
                   const estadoPago = pago.estado || pago.estadoPago || "PENDIENTE"
                   const statusConfig = getStatusConfig(estadoPago)
-                  const metodoPago = pago.metodo_pago || pago.metodoPago || "—"
-                  const referenciaPago = pago.referencia || pago.numeroReferencia || "—"
+                  const metodoPago = pago.metodo_pago || ""
+                  const referenciaPago = pago.referencia || ""
                   const fechaPago = pago.fecha
                     ? new Date(pago.fecha).toLocaleDateString("es-EC", {
                         day: "2-digit",
                         month: "short",
                       })
-                    : "—"
+                    : ""
                   return (
                     <TableRow key={pago.id} className="border-border/50">
                       <TableCell>
                         <span className="text-foreground text-sm">{fechaPago}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs text-muted-foreground">
-                          {metodoPago}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{metodoPago}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono text-xs text-foreground">
-                          {referenciaPago}
-                        </span>
+                        <span className="font-mono text-xs text-foreground">{referenciaPago}</span>
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="font-semibold text-foreground">
