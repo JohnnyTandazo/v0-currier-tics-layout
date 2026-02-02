@@ -169,9 +169,11 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           return
         }
 
-        // ✅ SANITIZACIÓN ROBUSTA DEL ID: Extraer antes del : (1:1 → 1)
-        const idLimpio = String(usuarioStored.id).split(':')[0].trim()
-        console.log("🛠️ Sanitizando ID:", usuarioStored.id, "-> ID Limpio:", idLimpio)
+        // ✅ SANITIZACIÓN AGRESIVA: Eliminar TODO lo que no sea número
+        const getCleanId = (id: any) => String(id).replace(/[^0-9]/g, '')
+        const idLimpio = getCleanId(usuarioStored.id)
+        console.log("🛠️ [MIS-ENVIOS] Sanitizando ID:", usuarioStored.id, "-> ID Limpio:", idLimpio)
+        console.log("🔍 [MIS-ENVIOS] Verificación: ID contiene ':' ?", String(usuarioStored.id).includes(':'))
         
         // ✅ VALIDACIÓN ESTRICTA: Bloquear peticiones si el ID no es numérico válido
         if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
@@ -193,8 +195,16 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
         const url = `${apiUrl}/api/envios/usuario/${idLimpio}`
         const facturasUrl = `${apiUrl}/api/facturas/usuario/${idLimpio}`
         
-        console.log(`📡 URL FINAL ENVIOS: ${url}`)
-        console.log(`📡 URL FINAL FACTURAS: ${facturasUrl}`)
+        // ✅ VALIDACIÓN DE URL: Verificar que NO contenga ':' en el ID
+        if (url.includes('/usuario/:') || url.match(/\/usuario\/\d+:/)) {
+          console.error("❌ [MIS-ENVIOS] URL CORRUPTA detectada:", url)
+          setError("Error: ID de usuario corrupto en URL")
+          setIsLoading(false)
+          return
+        }
+        
+        console.log(`📍 [MIS-ENVIOS] URL FINAL ENVIOS: ${url}`)
+        console.log(`📍 [MIS-ENVIOS] URL FINAL FACTURAS: ${facturasUrl}`)
         
         let data: any[] = []
         let facturaMap = new Map<string, string>()

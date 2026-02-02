@@ -115,9 +115,11 @@ export function Documentos() {
 
     const cargarEnvios = async () => {
       try {
-        // ✅ SANITIZAR ID ANTES DE LLAMAR AL BACKEND
-        const idLimpio = String(userId).split(':')[0].trim()
+        // ✅ SANITIZACIÓN AGRESIVA: Eliminar TODO lo que no sea número
+        const getCleanId = (id: any) => String(id).replace(/[^0-9]/g, '')
+        const idLimpio = getCleanId(userId)
         console.log("🛠️ [DOCUMENTOS] Sanitizando ID:", userId, "-> ID Limpio:", idLimpio)
+        console.log("🔍 [DOCUMENTOS] Verificación: ID contiene ':' ?", String(userId).includes(':'))
         
         if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
           console.error("❌ [DOCUMENTOS] ID inválido:", idLimpio)
@@ -126,23 +128,35 @@ export function Documentos() {
           return
         }
         
-        const response = await fetch(`/api/envios/usuario/${idLimpio}`)
-        const text = await response.text()
+        const url = `/api/envios/usuario/${idLimpio}`
         
+        // ✅ VALIDACIÓN DE URL: Verificar que NO contenga ':'
+        if (url.includes('/usuario/:') || url.match(/\/usuario\/\d+:/)) {
+          console.error("❌ [DOCUMENTOS] URL CORRUPTA:", url)
+          setEnvios([])
+          setIsLoadingEnvios(false)
+          return
+        }
+        
+        console.log("📍 [DOCUMENTOS] URL FINAL:", url)
+        
+        const response = await fetch(url)
         console.log("📊 [DOCUMENTOS] Response status:", response.status)
-        console.log("📊 [DOCUMENTOS] Response length:", text.length)
         
-        if (!text || text.trim() === "") {
-          console.warn("⚠️ [DOCUMENTOS] Respuesta vacía")
+        // ✅ EVITAR ERROR DE JSON: Solo parsear si response.ok es true
+        if (!response.ok) {
+          console.error("❌ [DOCUMENTOS] Error HTTP:", response.status)
           setEnvios([])
         } else {
-          try {
+          const text = await response.text()
+          
+          if (!text || text.trim() === "") {
+            console.warn("⚠️ [DOCUMENTOS] Respuesta vacía")
+            setEnvios([])
+          } else {
             const data = JSON.parse(text)
             console.log("✅ [DOCUMENTOS] Envíos cargados:", data.length)
             setEnvios(Array.isArray(data) ? data : [])
-          } catch (parseError) {
-            console.error("❌ [DOCUMENTOS] Error parsing JSON:", parseError)
-            setEnvios([])
           }
         }
       } catch (error) {

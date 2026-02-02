@@ -133,9 +133,11 @@ export function Pagos() {
 
     const fetchData = async () => {
       try {
-        // ✅ SANITIZACIÓN ROBUSTA DEL ID: Extraer antes del : (1:1 → 1)
-        const idLimpio = String(usuario.id).split(':')[0].trim()
-        console.log("🛠️ Sanitizando ID:", usuario.id, "-> ID Limpio:", idLimpio)
+        // ✅ SANITIZACIÓN AGRESIVA: Eliminar TODO lo que no sea número
+        const getCleanId = (id: any) => String(id).replace(/[^0-9]/g, '')
+        const idLimpio = getCleanId(usuario.id)
+        console.log("🛠️ [PAGOS] Sanitizando ID:", usuario.id, "-> ID Limpio:", idLimpio)
+        console.log("🔍 [PAGOS] Verificación: ID contiene ':' ?", String(usuario.id).includes(':'))
         
         // ✅ VALIDACIÓN ESTRICTA: Bloquear peticiones si el ID no es numérico válido
         if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
@@ -153,49 +155,56 @@ export function Pagos() {
         // Fetch facturas pendientes con ID sanitizado
         try {
           const urlFacturas = `${apiUrl}/api/facturas/usuario/${idLimpio}`
-          console.log("📍 URL FINAL FACTURAS:", urlFacturas)
-          console.log("📍 URL completa:", urlFacturas)
           
-          const resFacturas = await fetch(urlFacturas)
-          console.log("📊 Status response:", resFacturas.status, resFacturas.statusText)
+          // ✅ VALIDACIÓN DE URL: Verificar que NO contenga ':' en el ID
+          if (urlFacturas.includes('/usuario/:') || urlFacturas.match(/\/usuario\/\d+:/)) {
+            console.error("❌ [PAGOS] URL FACTURAS CORRUPTA:", urlFacturas)
+            setFacturasPendientes([])
+          } else {
+            console.log("📍 [PAGOS] URL FINAL FACTURAS:", urlFacturas)
           
-          if (resFacturas.ok) {
-            const text = await resFacturas.text()
-            
-            // ✅ Validar que no esté vacío
-            if (!text || text.trim() === "") {
-              console.warn("⚠️ Respuesta vacía del servidor")
+            const resFacturas = await fetch(urlFacturas)
+            console.log("📊 Status response:", resFacturas.status, resFacturas.statusText)
+          
+            // ✅ EVITAR ERROR DE JSON: Solo parsear si response.ok es true
+            if (!resFacturas.ok) {
+              console.error("❌ [PAGOS] Error HTTP al cargar facturas:", resFacturas.status)
+              const errorText = await resFacturas.text()
+              console.error("❌ [PAGOS] Error body (primeros 200 chars):", errorText.substring(0, 200))
               setFacturasPendientes([])
             } else {
-              try {
-                const data = JSON.parse(text)
-                console.log("📦 Raw data from Backend:", data)
-                console.log("📦 Raw data type:", typeof data, "isArray:", Array.isArray(data))
-                
-                if (Array.isArray(data)) {
-                  console.log("✅ Es array, elementos:", data.length)
+              const text = await resFacturas.text()
+            
+              // ✅ Validar que no esté vacío
+              if (!text || text.trim() === "") {
+                console.warn("⚠️ Respuesta vacía del servidor")
+                setFacturasPendientes([])
+              } else {
+                try {
+                  const data = JSON.parse(text)
+                  console.log("📦 Raw data from Backend:", data)
+                  console.log("📦 Raw data type:", typeof data, "isArray:", Array.isArray(data))
                   
-                  // Filtrar solo las facturas pendientes (si el endpoint no lo hace)
-                  const facturasPendientes = data.filter(
-                    (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
-                  )
-                  console.log("✅ Facturas pendientes cargadas:", facturasPendientes.length, "de", data.length)
-                  setFacturasPendientes(facturasPendientes)
-                } else {
-                  console.warn("⚠️ Respuesta de facturas no es array:", data)
+                  if (Array.isArray(data)) {
+                    console.log("✅ Es array, elementos:", data.length)
+                    
+                    // Filtrar solo las facturas pendientes (si el endpoint no lo hace)
+                    const facturasPendientes = data.filter(
+                      (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
+                    )
+                    console.log("✅ Facturas pendientes cargadas:", facturasPendientes.length, "de", data.length)
+                    setFacturasPendientes(facturasPendientes)
+                  } else {
+                    console.warn("⚠️ Respuesta de facturas no es array:", data)
+                    setFacturasPendientes([])
+                  }
+                } catch (parseErr) {
+                  console.error("❌ Error parseando JSON:", parseErr)
+                  console.error("📄 Texto recibido:", text.substring(0, 200))
                   setFacturasPendientes([])
                 }
-              } catch (parseErr) {
-                console.error("❌ Error parseando JSON:", parseErr)
-                console.error("📄 Texto recibido:", text.substring(0, 200))
-                setFacturasPendientes([])
               }
             }
-          } else {
-            const errorText = await resFacturas.text()
-            console.warn("⚠️ Error cargando facturas:", resFacturas.status, resFacturas.statusText)
-            console.warn("⚠️ Error body:", errorText.substring(0, 200))
-            setFacturasPendientes([])
           }
         } catch (err) {
           console.error("❌ Error fetching facturas:", err)
@@ -205,16 +214,30 @@ export function Pagos() {
         // Fetch pagos recientes
         try {
           const urlPagos = `${apiUrl}/api/pagos?usuarioId=${idLimpio}`
-          console.log("📍 URL FINAL PAGOS:", urlPagos)
-          const resPagos = await fetch(urlPagos)
-          if (resPagos.ok) {
-            const text = await resPagos.text()
+          
+          // ✅ VALIDACIÓN DE URL: Verificar que NO contenga ':' en el ID
+          if (urlPagos.includes('usuarioId=:') || urlPagos.match(/usuarioId=\d+:/)) {
+            console.error("❌ [PAGOS] URL PAGOS CORRUPTA:", urlPagos)
+            setPagosRecientes([])
+          } else {
+            console.log("📍 [PAGOS] URL FINAL PAGOS:", urlPagos)
             
-            if (!text || text.trim() === "") {
-              console.warn("⚠️ Respuesta de pagos vacía")
+            const resPagos = await fetch(urlPagos)
+            console.log("📊 [PAGOS] Response status:", resPagos.status, resPagos.statusText)
+            
+            // ✅ EVITAR ERROR DE JSON: Solo parsear si response.ok es true
+            if (!resPagos.ok) {
+              console.error("❌ [PAGOS] Error HTTP al cargar pagos:", resPagos.status)
+              const errorText = await resPagos.text()
+              console.error("❌ [PAGOS] Error body (primeros 200 chars):", errorText.substring(0, 200))
               setPagosRecientes([])
             } else {
-              try {
+              const text = await resPagos.text()
+            
+              if (!text || text.trim() === "") {
+                console.warn("⚠️ Respuesta de pagos vacía")
+                setPagosRecientes([])
+              } else {
                 const data = JSON.parse(text)
                 if (Array.isArray(data)) {
                   console.log("✅ Pagos recientes cargados:", data.length)
@@ -228,20 +251,8 @@ export function Pagos() {
                   console.warn("⚠️ Respuesta de pagos no es array:", data)
                   setPagosRecientes([])
                 }
-              } catch (parseErr) {
-                console.error("❌ Error parseando pagos JSON:", parseErr)
-                console.error("📄 Respuesta recibida (primeros 500 chars):", text.substring(0, 500))
-                if (text.includes("<")) {
-                  console.error("❌ Parece ser HTML error del servidor, no JSON válido")
-                }
-                setPagosRecientes([])
               }
             }
-          } else {
-            const errorText = await resPagos.text()
-            console.warn("⚠️ Error cargando pagos:", resPagos.status, resPagos.statusText)
-            console.warn("⚠️ Error body:", errorText.substring(0, 200))
-            setPagosRecientes([])
           }
         } catch (err) {
           console.error("❌ Error fetching pagos:", err)
