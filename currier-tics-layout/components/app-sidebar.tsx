@@ -95,6 +95,9 @@ export function AppSidebar({ user, currentRole, currentClientView, onRoleChange,
         case "Panel Principal":
           onClientViewChange("dashboard")
           break
+        case "Mis Paquetes":
+          onClientViewChange("paquetes")
+          break
         case "Envíos":
           onClientViewChange("envios")
           break
@@ -118,6 +121,8 @@ export function AppSidebar({ user, currentRole, currentClientView, onRoleChange,
     switch (itemTitle) {
       case "Panel Principal":
         return "dashboard"
+      case "Mis Paquetes":
+        return "paquetes"
       case "Envíos":
         return "envios"
       case "Pagos":

@@ -15,7 +15,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { safeFetch } from "@/lib/safeFetch"
 import { formatearFecha } from "@/lib/formatDate"
 
 interface MisPaquetesProps {
@@ -46,40 +45,39 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
       try {
         const usuario = JSON.parse(localStorage.getItem("usuario") || "null")
         if (!usuario || !usuario.id) {
-          console.error("Usuario no autenticado o inválido")
           setPaquetes([])
+          setError("Usuario no autenticado")
           return
         }
 
         const usuarioId = usuario.id
-
-        // ✅ LIMPIAR ID CORRUPTO: Extraer antes del : (1:1 → 1)
         const cleanId = usuarioId.toString().split(':')[0].trim()
-        console.log("🛠️ Limpiando ID corrupto:", usuarioId, "-> ID Final:", cleanId)
 
         if (!cleanId || isNaN(Number(cleanId)) || Number(cleanId) <= 0) {
-          throw new Error("ID de usuario inválido después de limpiar")
+          setError("ID de usuario inválido")
+          setPaquetes([])
+          return
         }
 
-        const url = `/api/paquetes?usuarioId=${cleanId}`
-        console.log("Obteniendo paquetes del usuario:", url)
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
+        const url = `${apiUrl}/api/paquetes?usuarioId=${cleanId}`
 
-        const data = await safeFetch(url)
-        console.log("USUARIO LOGUEADO:", usuario)
-        console.log("PRIMER PAQUETE RAW:", data[0])
+        const response = await fetch(url)
+        if (!response.ok) {
+          setPaquetes([])
+          return
+        }
 
-        const misPaquetes = data.filter((p: any) => {
-          // Intentamos obtener el ID del paquete de varias formas posibles
-          const packUserId = p.usuarioId || p.usuario?.id || p.id_usuario
-          // ✅ USAR ID LIMPIO PARA COMPARACIÓN
-          return String(packUserId) === String(cleanId)
-        })
+        const text = await response.text()
+        if (!text || text.trim() === "") {
+          setPaquetes([])
+          return
+        }
 
-        console.log("PAQUETES FILTRADOS:", misPaquetes)
-        setPaquetes(misPaquetes)
+        const data = JSON.parse(text)
+        setPaquetes(Array.isArray(data) ? data : [])
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
-        console.error("Error obteniendo paquetes:", errorMessage)
         setError(errorMessage)
         setPaquetes([])
       } finally {
