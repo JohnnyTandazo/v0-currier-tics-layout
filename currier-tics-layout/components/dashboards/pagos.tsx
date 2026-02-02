@@ -237,17 +237,31 @@ export function Pagos() {
                 console.warn("⚠️ Respuesta de pagos vacía")
                 setPagosRecientes([])
               } else {
-                const data = JSON.parse(text)
-                if (Array.isArray(data)) {
-                  console.log("✅ Pagos recientes cargados:", data.length)
-                  // El backend ya filtra por usuarioId, pero hacemos validación adicional
-                  const misPagos = data.filter(
-                    (p: PagoReciente) => String(p.usuarioId) === String(idLimpio)
-                  )
-                  console.log("✅ Pagos filtrados:", misPagos.length)
-                  setPagosRecientes(misPagos)
-                } else {
-                  console.warn("⚠️ Respuesta de pagos no es array:", data)
+                try {
+                  const data = JSON.parse(text)
+                  console.log("📦 JSON parseado de pagos:", data)
+                  console.log("📊 Tipo:", typeof data, "Es array:", Array.isArray(data))
+                  
+                  if (Array.isArray(data)) {
+                    console.log("✅ Es array, total elementos:", data.length)
+                    console.log("📋 Elementos completos:", JSON.stringify(data, null, 2))
+                    
+                    // El backend ya filtra por usuarioId, pero hacemos validación adicional
+                    const misPagos = data.filter(
+                      (p: PagoReciente) => String(p.usuarioId) === String(idLimpio)
+                    )
+                    console.log("✅ Pagos filtrados para usuario", idLimpio, ":", misPagos.length)
+                    setPagosRecientes(misPagos)
+                  } else {
+                    console.warn("⚠️ Respuesta de pagos no es array:", data)
+                    setPagosRecientes([])
+                  }
+                } catch (parseErr) {
+                  console.error("❌ Error parseando pagos JSON:", parseErr)
+                  console.error("📄 Respuesta recibida (primeros 500 chars):", text.substring(0, 500))
+                  if (text.includes("<")) {
+                    console.error("❌ Parece ser HTML error del servidor, no JSON válido")
+                  }
                   setPagosRecientes([])
                 }
               }
@@ -346,21 +360,34 @@ export function Pagos() {
 
           // Refetch pagos recientes
           const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${idLimpio}`)
+          console.log("🔄 [REFETCH] GET /api/pagos?usuarioId=", idLimpio)
+          console.log("📊 [REFETCH] Response status:", resPagos.status)
+          
           if (resPagos.ok) {
             const text = await resPagos.text()
+            console.log("📥 [REFETCH] Respuesta recibida (primeros 200 chars):", text.substring(0, 200))
+            
             if (text && text.trim() !== "" && !text.includes("<")) {
               try {
                 const data = JSON.parse(text)
+                console.log("✅ [REFETCH] JSON parseado:", data)
+                
                 if (Array.isArray(data)) {
+                  console.log("✅ [REFETCH] Pagos en array:", data.length)
                   const misPagos = data.filter(
                     (p: PagoReciente) => String(p.usuarioId) === String(idLimpio)
                   )
+                  console.log("✅ [REFETCH] Pagos después de filtro:", misPagos.length)
                   setPagosRecientes(misPagos)
                 }
               } catch (err) {
-                console.error("❌ Error parseando pagos en refetch:", err)
+                console.error("❌ [REFETCH] Error parseando pagos:", err)
               }
+            } else {
+              console.warn("⚠️ [REFETCH] Respuesta vacía o contiene HTML")
             }
+          } else {
+            console.error("❌ [REFETCH] Error HTTP al refetch pagos:", resPagos.status)
           }
 
           setSubmitSuccess(false)
