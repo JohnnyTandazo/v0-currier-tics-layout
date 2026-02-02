@@ -99,16 +99,12 @@ export function Notificaciones() {
     const fetchNotificaciones = async () => {
       try {
         setLoading(true)
-        // ✅ LIMPIAR ID CORRUPTO
-        const cleanId = usuario.id.toString().split(':')[0].trim()
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL
-        if (!apiUrl) {
-          setNotificaciones([])
-          setLoading(false)
-          return
-        }
-
-        const response = await fetch(`${apiUrl}/api/notificaciones`)
+        // ⚠️ Si el endpoint /api/notificaciones no existe, devolver vacío
+        // para evitar errores 404 en la consola
+        console.log("⚠️ [NOTIF] Endpoint /api/notificaciones no disponible en backend")
+        setNotificaciones([])
+        setLoading(false)
+        return
         
         if (response.ok) {
           const data = await response.json()

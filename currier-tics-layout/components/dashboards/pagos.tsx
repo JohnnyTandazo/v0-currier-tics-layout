@@ -133,9 +133,8 @@ export function Pagos() {
 
     const fetchData = async () => {
       try {
-        // ✅ SANITIZACIÓN AGRESIVA: Eliminar TODO lo que no sea número
-        const getCleanId = (id: any) => String(id).replace(/[^0-9]/g, '')
-        const idLimpio = getCleanId(usuario.id)
+        // ✅ SANITIZACIÓN: Usar split(':')[0] para obtener solo la parte numérica
+        const idLimpio = String(usuario.id).split(':')[0].trim()
         console.log("🛠️ [PAGOS] Sanitizando ID:", usuario.id, "-> ID Limpio:", idLimpio)
         console.log("🔍 [PAGOS] Verificación: ID contiene ':' ?", String(usuario.id).includes(':'))
         

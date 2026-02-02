@@ -117,7 +117,7 @@ export function Documentos() {
       try {
         // ✅ SANITIZACIÓN AGRESIVA: Eliminar TODO lo que no sea número
         const getCleanId = (id: any) => String(id).replace(/[^0-9]/g, '')
-        const idLimpio = getCleanId(userId)
+        const idLimpio = String(userId).split(':')[0].trim()
         console.log("🛠️ [DOCUMENTOS] Sanitizando ID:", userId, "-> ID Limpio:", idLimpio)
         console.log("🔍 [DOCUMENTOS] Verificación: ID contiene ':' ?", String(userId).includes(':'))
         

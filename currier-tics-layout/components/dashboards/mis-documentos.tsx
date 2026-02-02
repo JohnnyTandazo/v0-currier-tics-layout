@@ -24,9 +24,8 @@ export default function MisDocumentos() {
         const user = localStorage.getItem("usuario")
         if (user) {
           const usuarioObj = JSON.parse(user)
-          // ✅ SANITIZACIÓN AGRESIVA: Eliminar TODO lo que no sea número
-          const getCleanId = (id: any) => String(id).replace(/[^0-9]/g, '')
-          const idLimpio = getCleanId(usuarioObj.id)
+          // ✅ SANITIZACIÓN: Usar split(':')[0] para obtener solo la parte numérica
+          const idLimpio = String(usuarioObj.id).split(':')[0].trim()
           console.log("🛠️ [MIS-DOCS] Sanitizando ID:", usuarioObj.id, "-> ID Limpio:", idLimpio)
           console.log("🔍 [MIS-DOCS] Verificación: ID contiene ':' ?", String(usuarioObj.id).includes(':'))
           
@@ -212,9 +211,13 @@ export default function MisDocumentos() {
                           ${pkg.precioTotal || pkg.precio || "0.00"}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="ghost" disabled>
-                            <FileText className="mr-2 h-4 w-4" /> Próximamente
-                          </Button>
+                          {pkg.estado === "PAGADA" ? (
+                            <Button size="sm" variant="default">
+                              <FileText className="mr-2 h-4 w-4" /> Descargar PDF
+                            </Button>
+                          ) : (
+                            <Badge variant="secondary">{pkg.estado || "PENDIENTE"}</Badge>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
