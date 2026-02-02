@@ -68,11 +68,8 @@ interface PagoReciente {
   monto?: number
   facturaId?: string | number
   metodoPago?: string
-  metodo_pago?: string
   estado?: "VERIFICADO" | "PENDIENTE" | "RECHAZADO" | "CONFIRMADO" | string
-  estadoPago?: string
   referencia?: string
-  numeroReferencia?: string
   usuarioId?: number
   usuario?: { id: number }
 }
@@ -121,7 +118,6 @@ export function Pagos() {
       }
 
       const data = JSON.parse(text)
-      console.log("PAGOS RECUPERADOS:", data)
 
       if (Array.isArray(data) && data.length > 0) {
         setPagosRecientes(data)
@@ -165,83 +161,50 @@ export function Pagos() {
 
     const fetchData = async () => {
       try {
-        // ✅ SANITIZACIÓN: Usar split(':')[0] para obtener solo la parte numérica
         const idLimpio = usuarioId
         
-        // ✅ VALIDACIÓN ESTRICTA: Bloquear peticiones si el ID no es numérico válido
         if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
-          console.error(`❌ BLOQUEADO: ID inválido o no numérico: "${idLimpio}"`)
-          console.error("   Esto previene error 404 y respuestas HTML del backend")
           setLoading(false)
           return
         }
         
-        console.log(`✅ ID validado y sanitizado: ${idLimpio} (tipo numérico confirmado)`)
-        
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
-        console.log("🌐 API URL base:", apiUrl)
 
-        // Fetch facturas pendientes con ID sanitizado
+        // Fetch facturas pendientes
         try {
           const urlFacturas = `${apiUrl}/api/facturas/usuario/${idLimpio}`
+          const resFacturas = await fetch(urlFacturas)
           
-          // ✅ VALIDACIÓN DE URL: Verificar que NO contenga ':' en el ID
-          if (urlFacturas.includes('/usuario/:') || urlFacturas.match(/\/usuario\/\d+:/)) {
-            console.error("❌ [PAGOS] URL FACTURAS CORRUPTA:", urlFacturas)
-            setFacturasPendientes([])
-          } else {
-            console.log("📍 [PAGOS] URL FINAL FACTURAS:", urlFacturas)
-          
-            const resFacturas = await fetch(urlFacturas)
-            console.log("📊 Status response:", resFacturas.status, resFacturas.statusText)
-          
-            // ✅ EVITAR ERROR DE JSON: Solo parsear si response.ok es true
-            if (!resFacturas.ok) {
-              console.error("❌ [PAGOS] Error HTTP al cargar facturas:", resFacturas.status)
-              const errorText = await resFacturas.text()
-              console.error("❌ [PAGOS] Error body (primeros 200 chars):", errorText.substring(0, 200))
-              setFacturasPendientes([])
-            } else {
-              const text = await resFacturas.text()
+          if (resFacturas.ok) {
+            const text = await resFacturas.text()
             
-              // ✅ Validar que no esté vacío
-              if (!text || text.trim() === "") {
-                console.warn("⚠️ Respuesta vacía del servidor")
-                setFacturasPendientes([])
-              } else {
-                try {
-                  const data = JSON.parse(text)
-                  console.log("📦 Raw data from Backend:", data)
-                  console.log("📦 Raw data type:", typeof data, "isArray:", Array.isArray(data))
-                  
-                  if (Array.isArray(data)) {
-                    console.log("✅ Es array, elementos:", data.length)
-                    
-                    // Filtrar solo las facturas pendientes (si el endpoint no lo hace)
-                    const facturasPendientes = data.filter(
-                      (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
-                    )
-                    console.log("✅ Facturas pendientes cargadas:", facturasPendientes.length, "de", data.length)
-                    setFacturasPendientes(facturasPendientes)
-                  } else {
-                    console.warn("⚠️ Respuesta de facturas no es array:", data)
-                    setFacturasPendientes([])
-                  }
-                } catch (parseErr) {
-                  console.error("❌ Error parseando JSON:", parseErr)
-                  console.error("📄 Texto recibido:", text.substring(0, 200))
+            if (text && text.trim() !== "") {
+              try {
+                const data = JSON.parse(text)
+                
+                if (Array.isArray(data)) {
+                  const facturasPendientes = data.filter(
+                    (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
+                  )
+                  setFacturasPendientes(facturasPendientes)
+                } else {
                   setFacturasPendientes([])
                 }
+              } catch (parseErr) {
+                setFacturasPendientes([])
               }
+            } else {
+              setFacturasPendientes([])
             }
+          } else {
+            setFacturasPendientes([])
           }
         } catch (err) {
-          console.error("❌ Error fetching facturas:", err)
           setFacturasPendientes([])
         }
 
         // Fetch pagos recientes
-        await fetchPagosRecientes(apiUrl, "1")
+        await fetchPagosRecientes(apiUrl, idLimpio)
       } catch (err) {
         console.error("Error fetching data:", err)
       } finally {
@@ -258,15 +221,11 @@ export function Pagos() {
 
   const handleSubmitPago = async () => {
     try {
-      console.log("📤 Registrando pago:", formData)
-      
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       if (!apiUrl || !usuario) {
-        console.error("❌ API URL no configurada o usuario no existe")
         return
       }
 
-      // Prepare FormData for file upload (multipart/form-data)
       const submitData = new FormData()
       submitData.append("facturaId", formData.facturaId)
       submitData.append("monto", formData.monto)
@@ -277,25 +236,15 @@ export function Pagos() {
         submitData.append("comprobante", formData.comprobante)
       }
 
-      console.log("📦 FormData preparado:")
-      for (let [key, value] of submitData.entries()) {
-        console.log(`  ${key}:`, value)
-      }
-
-      // Submit payment to API - NO set Content-Type header (browser sets it automatically with boundary)
       const response = await fetch(`${apiUrl}/api/pagos`, {
         method: "POST",
         body: submitData,
       })
 
-      console.log("📊 Response status:", response.status, response.statusText)
-
       if (response.ok) {
         const result = await response.json()
-        console.log("✅ Pago registrado exitosamente:", result)
         setSubmitSuccess(true)
         
-        // Reset form
         setFormData({
           facturaId: "",
           monto: "",
@@ -305,16 +254,14 @@ export function Pagos() {
           comprobante: null,
         })
 
-        // Reload data from API
         setTimeout(async () => {
-          // ✅ SANITIZAR ID EN REFETCH
           const idLimpio = String(usuario.id).split(':')[0].trim()
           
           // Refetch facturas pendientes
           const resFacturas = await fetch(`${apiUrl}/api/facturas/usuario/${idLimpio}`)
           if (resFacturas.ok) {
             const text = await resFacturas.text()
-            if (text && text.trim() !== "" && !text.includes("<")) {
+            if (text && text.trim() !== "") {
               try {
                 const data = JSON.parse(text)
                 if (Array.isArray(data)) {
@@ -323,26 +270,21 @@ export function Pagos() {
                   )
                   setFacturasPendientes(facturasPendientes)
                 }
-              } catch (err) {
-                console.error("❌ Error parseando facturas en refetch:", err)
-              }
+              } catch (err) {}
             }
           }
 
           // Refetch pagos recientes
-          await fetchPagosRecientes(apiUrl, "1")
+          await fetchPagosRecientes(apiUrl, idLimpio)
 
           setSubmitSuccess(false)
           router.refresh()
         }, 1500)
       } else {
         const errorText = await response.text()
-        console.error("❌ Error al registrar pago:", response.status, response.statusText)
-        console.error("❌ Error body:", errorText)
         alert(`Error ${response.status}: ${errorText || 'No se pudo registrar el pago'}`)
       }
     } catch (err) {
-      console.error("❌ Error submitting pago:", err)
       alert("Error de red al enviar el pago. Verifica tu conexión.")
     }
   }
@@ -701,10 +643,8 @@ export function Pagos() {
               </TableHeader>
               <TableBody>
                 {pagosRecientes?.map((pago) => {
-                  const estadoPago = pago.estado || pago.estadoPago || "PENDIENTE"
+                  const estadoPago = pago.estado || "PENDIENTE"
                   const statusConfig = getStatusConfig(estadoPago)
-                  const metodoPago = pago.metodo_pago || ""
-                  const referenciaPago = pago.referencia || ""
                   const fechaPago = pago.fecha
                     ? new Date(pago.fecha).toLocaleDateString("es-EC", {
                         day: "2-digit",
@@ -717,10 +657,10 @@ export function Pagos() {
                         <span className="text-foreground text-sm">{fechaPago}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs text-muted-foreground">{metodoPago}</span>
+                        <span className="text-xs text-muted-foreground">{pago.metodoPago || ""}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono text-xs text-foreground">{referenciaPago}</span>
+                        <span className="font-mono text-xs text-foreground">{pago.referencia || ""}</span>
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="font-semibold text-foreground">
