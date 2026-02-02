@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Package, Eye, Trash2, AlertCircle, Loader2 } from "lucide-react"
+import { Package, Eye, Trash2, AlertCircle, Loader2, Plane, Truck } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +30,7 @@ interface Paquete {
   tipo_envio: string
   fechaRegistro?: string
   usuarioId: number
+  tipoDeducido?: "NACIONAL" | "INTERNACIONAL"
 }
 
 export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
@@ -37,6 +38,29 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+
+  // Función para deducir el tipo de paquete basándose en el tracking
+  const deducirTipo = (tracking: string): "NACIONAL" | "INTERNACIONAL" => {
+    const trackingUpper = tracking.toUpperCase()
+    
+    // Nacional: starts with NAC-, TRK
+    if (trackingUpper.startsWith("NAC-") || trackingUpper.startsWith("TRK")) {
+      return "NACIONAL"
+    }
+    
+    // Internacional: starts with USA- o solo números
+    if (trackingUpper.startsWith("USA-") || /^\d+$/.test(tracking)) {
+      return "INTERNACIONAL"
+    }
+    
+    // Default: Internacional si tiene prefijo USA o empieza con número
+    if (/^\d/.test(tracking)) {
+      return "INTERNACIONAL"
+    }
+    
+    // Si no coincide con ninguno, asumir INTERNACIONAL
+    return "INTERNACIONAL"
+  }
 
   useEffect(() => {
     const fetchPaquetes = async () => {
@@ -75,7 +99,11 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
         }
 
         const data = JSON.parse(text)
-        setPaquetes(Array.isArray(data) ? data : [])
+        const paquetesConTipo = (Array.isArray(data) ? data : []).map((pkg: Paquete) => ({
+          ...pkg,
+          tipoDeducido: deducirTipo(pkg.trackingNumber)
+        }))
+        setPaquetes(paquetesConTipo)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error desconocido"
         setError(errorMessage)
@@ -93,8 +121,8 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
     pkg.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const internacionales = filteredPaquetes.filter((p) => p.tipo_envio === "INTERNACIONAL" || p.tipo_envio === "internacional")
-  const nacionales = filteredPaquetes.filter((p) => p.tipo_envio === "NACIONAL" || p.tipo_envio === "nacional")
+  const internacionales = filteredPaquetes.filter((p) => p.tipoDeducido === "INTERNACIONAL")
+  const nacionales = filteredPaquetes.filter((p) => p.tipoDeducido === "NACIONAL")
 
   const getStatusColor = (estado: string) => {
     const estado_upper = estado.toUpperCase()
@@ -195,9 +223,17 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
                         <TableCell className="font-mono text-sm">{pkg.trackingNumber}</TableCell>
                         <TableCell>{pkg.descripcion}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={pkg.tipo_envio === "INTERNACIONAL" ? "bg-blue-500/20" : "bg-green-500/20"}>
-                            {pkg.tipo_envio}
-                          </Badge>
+                          {pkg.tipoDeducido === "INTERNACIONAL" ? (
+                            <Badge className="bg-blue-600 text-white gap-1">
+                              <Plane className="h-3 w-3" />
+                              Internacional
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-green-600 text-white gap-1">
+                              <Truck className="h-3 w-3" />
+                              Nacional
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>{pkg.pesoLibras} lb</TableCell>
                         <TableCell>
