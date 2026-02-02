@@ -304,7 +304,7 @@ export function Pagos() {
       PENDIENTE: {
         color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
         icon: <Clock className="h-3 w-3" />,
-        label: "Pendiente",
+        label: "VERIFICANDO PAGO",
       },
       RECHAZADO: {
         color: "bg-red-500/20 text-red-400 border-red-500/30",

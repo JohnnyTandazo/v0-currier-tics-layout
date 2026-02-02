@@ -16,6 +16,7 @@ import {
   Plane,
   Truck,
   DollarSign as DollarIcon,
+  ImageIcon,
 } from "lucide-react"
 import {
   Table,
@@ -724,6 +725,7 @@ export function OperatorDashboard() {
                   <TableHead>Método</TableHead>
                   <TableHead>Referencia</TableHead>
                   <TableHead>Fecha</TableHead>
+                  <TableHead>Comprobante</TableHead>
                   <TableHead className="text-right">Acción</TableHead>
                 </TableRow>
               </TableHeader>
@@ -736,6 +738,21 @@ export function OperatorDashboard() {
                     <TableCell className="font-mono text-xs">{pago.referencia || "-"}</TableCell>
                     <TableCell className="text-xs">
                       {pago.fecha ? new Date(pago.fecha).toLocaleDateString("es-EC") : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {pago.imagenUrl ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(pago.imagenUrl, "_blank")}
+                          className="text-xs"
+                        >
+                          <ImageIcon className="mr-1 h-3 w-3" />
+                          Ver Foto
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sin comprobante</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
