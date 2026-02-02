@@ -24,48 +24,39 @@ export default function MisDocumentos() {
         const user = localStorage.getItem("usuario")
         if (user) {
           const usuarioObj = JSON.parse(user)
-          // ✅ SANITIZACIÓN: Usar split(':')[0] para obtener solo la parte numérica
           const idLimpio = String(usuarioObj.id).split(':')[0].trim()
-          console.log("🛠️ [MIS-DOCS] Sanitizando ID:", usuarioObj.id, "-> ID Limpio:", idLimpio)
-          console.log("🔍 [MIS-DOCS] Verificación: ID contiene ':' ?", String(usuarioObj.id).includes(':'))
           
           if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
-            console.error("❌ [MIS-DOCS] ID inválido:", idLimpio)
             setEnvios([])
           } else {
             try {
               const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
               const url = `${apiUrl}/api/envios/usuario/${idLimpio}`
               
-              // ✅ VALIDACIÓN DE URL: Verificar que NO contenga ':'
               if (url.includes('/usuario/:') || url.match(/\/usuario\/\d+:/)) {
-                console.error("❌ [MIS-DOCS] URL CORRUPTA:", url)
                 setEnvios([])
               } else {
                 console.log("📍 [MIS-DOCS] URL FINAL:", url)
                 
                 const resEnvios = await fetch(url)
-                console.log("📊 [MIS-DOCS] Response status:", resEnvios.status)
                 
-                // ✅ EVITAR ERROR DE JSON: Solo parsear si response.ok es true
                 if (!resEnvios.ok) {
-                  console.error("❌ [MIS-DOCS] Error HTTP:", resEnvios.status)
                   setEnvios([])
                 } else {
                   const textEnvios = await resEnvios.text()
                   
                   if (!textEnvios || textEnvios.trim() === "") {
-                    console.warn("⚠️ [MIS-DOCS] Respuesta vacía")
+
                     setEnvios([])
                   } else {
                     const dataEnvios = JSON.parse(textEnvios)
-                    console.log("✅ [MIS-DOCS] Envíos cargados:", dataEnvios.length)
+
                     setEnvios(Array.isArray(dataEnvios) ? dataEnvios : [])
                   }
                 }
               }
             } catch (envioError) {
-              console.error("❌ [MIS-DOCS] Error fetching envios:", envioError)
+
               setEnvios([])
             }
           }
@@ -83,7 +74,7 @@ export default function MisDocumentos() {
             setPaquetes(Array.isArray(dataPaquetes) ? dataPaquetes : [])
           }
         } catch (paqueteError) {
-          console.error("❌ Error fetching paquetes:", paqueteError)
+
           setPaquetes([])
         }
       } finally {
@@ -159,7 +150,12 @@ export default function MisDocumentos() {
                             <Button
                               size="sm"
                               variant="default"
-                              onClick={() => setSelectedEnvio(env)}
+                              onClick={() => {
+                                const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
+                                window.open(`${apiUrl}/api/pdf/guia/${env.id}`, '_blank')
+                              }}
+                              title="Descargar PDF"
+                              className="cursor-pointer"
                             >
                               <Eye className="mr-2 h-4 w-4" />
                               Ver Guía
@@ -211,17 +207,18 @@ export default function MisDocumentos() {
                           ${pkg.precioTotal || pkg.precio || "0.00"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {pkg.estado === "PAGADA" ? (
-                            <Button size="sm" variant="default">
-                              <FileText className="mr-2 h-4 w-4" /> Ver Factura
-                            </Button>
-                          ) : pkg.estado === "PROCESANDO" ? (
-                            <Badge variant="outline">En Procesamiento</Badge>
-                          ) : (
-                            <Button size="sm" variant="outline">
-                              <FileText className="mr-2 h-4 w-4" /> Ver Factura
-                            </Button>
-                          )}
+                          <Button 
+                            size="sm" 
+                            variant="default"
+                            onClick={() => {
+                              const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
+                              window.open(`${apiUrl}/api/pdf/factura/${pkg.id}`, '_blank')
+                            }}
+                            title="Descargar PDF"
+                            className="cursor-pointer"
+                          >
+                            <FileText className="mr-2 h-4 w-4" /> Ver Factura
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
