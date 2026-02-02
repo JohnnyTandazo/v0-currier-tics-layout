@@ -41,36 +41,67 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
 
   // Función para detectar si la descripción contiene palabras clave de envío nacional
   const contieneKeywordNacional = (descripcion: string): boolean => {
-    const keywordsNacionales = ["quito", "guayaquil", "cuenca", "ambato", "riobamba", "latacunga", "puyo", "machala", "manta", "santo domingo", "esmeraldas"]
+    // Keywords expandidas: ciudades + palabras clave de envío nacional + palabras de prueba
+    const keywordsNacionales = [
+      // Ciudades ecuatorianas
+      "quito", "guayaquil", "cuenca", "ambato", "riobamba", "latacunga", "puyo", "machala", "manta", "santo domingo", "esmeraldas",
+      // Palabras clave de envío nacional
+      "nacional", "interno", "provincia", "servientrega",
+      // Palabras para pruebas
+      "prueba"
+    ]
     const descLower = descripcion.toLowerCase()
     return keywordsNacionales.some(keyword => descLower.includes(keyword))
   }
 
   // Función para deducir el tipo de paquete basándose en el tracking y descripción
-  const deducirTipo = (tracking: string, descripcion: string = ""): "NACIONAL" | "INTERNACIONAL" => {
+  // ✅ REGLA DE PRIORIDAD: Si el backend ya envía tipo, úsalo primero
+  const deducirTipo = (paquete: any, tracking: string, descripcion: string = ""): "NACIONAL" | "INTERNACIONAL" => {
+    // REGLA 1: Si el backend ya manda el tipo, respétalo
+    if (paquete && paquete.tipo) {
+      const tipoBackend = paquete.tipo.toUpperCase()
+      if (tipoBackend === "NACIONAL" || tipoBackend === "NACIONALES") {
+        return "NACIONAL"
+      }
+      if (tipoBackend === "INTERNACIONAL" || tipoBackend === "INTERNACIONALES") {
+        return "INTERNACIONAL"
+      }
+    }
+    
+    // Si también viene tipo_envio, considera eso
+    if (paquete && paquete.tipo_envio) {
+      const tipoEnvio = paquete.tipo_envio.toUpperCase()
+      if (tipoEnvio === "NACIONAL") {
+        return "NACIONAL"
+      }
+      if (tipoEnvio === "INTERNACIONAL") {
+        return "INTERNACIONAL"
+      }
+    }
+
     const trackingUpper = tracking.toUpperCase()
     
-    // NACIONALES: NAC-, SERVI-, TRANS- (prefijos de compañías nacionales)
-    if (trackingUpper.startsWith("NAC-") || trackingUpper.startsWith("SERVI-") || trackingUpper.startsWith("TRANS-")) {
+    // PLAN B: NACIONALES: NAC-, SERVI-, TRANS-, TRK- (prefijos de compañías nacionales)
+    if (trackingUpper.startsWith("NAC-") || trackingUpper.startsWith("SERVI-") || trackingUpper.startsWith("TRANS-") || trackingUpper.startsWith("TRK-")) {
       return "NACIONAL"
     }
     
-    // NACIONALES: Si tiene keyword en descripción (ej: Quito, Guayaquil)
+    // PLAN B: NACIONALES: Si tiene keyword en descripción (ej: Quito, Guayaquil, nacional, prueba)
     if (contieneKeywordNacional(descripcion)) {
       return "NACIONAL"
     }
     
-    // INTERNACIONALES: USA-, TBA-, AMZN- (prefijos de compañías internacionales)
+    // PLAN B: INTERNACIONALES: USA-, TBA-, AMZN- (prefijos de compañías internacionales)
     if (trackingUpper.startsWith("USA-") || trackingUpper.startsWith("TBA-") || trackingUpper.startsWith("AMZN-")) {
       return "INTERNACIONAL"
     }
     
-    // INTERNACIONALES: Formato numérico largo (típico de tracking gringo)
+    // PLAN B: INTERNACIONALES: Formato numérico largo (típico de tracking gringo - 10+ dígitos)
     if (/^\d{10,}$/.test(tracking)) {
       return "INTERNACIONAL"
     }
     
-    // INTERNACIONALES: Empieza con números pero no es keyword nacional
+    // PLAN B: INTERNACIONALES: Empieza con números pero no es keyword nacional
     if (/^\d/.test(tracking) && !contieneKeywordNacional(descripcion)) {
       return "INTERNACIONAL"
     }
@@ -118,7 +149,7 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
         const data = JSON.parse(text)
         const paquetesConTipo = (Array.isArray(data) ? data : []).map((pkg: Paquete) => ({
           ...pkg,
-          tipoDeducido: deducirTipo(pkg.trackingNumber, pkg.descripcion)
+          tipoDeducido: deducirTipo(pkg, pkg.trackingNumber, pkg.descripcion)
         }))
         
         // ✅ PAQUETE FICTICIO TEMPORAL PARA PRUEBAS
