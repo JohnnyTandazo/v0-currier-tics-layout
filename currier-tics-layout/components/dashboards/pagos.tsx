@@ -104,6 +104,60 @@ export function Pagos() {
     comprobante: null,
   })
 
+  const fetchPagosRecientes = async (apiUrl: string, usuarioId: string) => {
+    const endpoints = [
+      `${apiUrl}/api/pagos?usuarioId=${usuarioId}`,
+      `${apiUrl}/api/pagos/usuario/${usuarioId}`,
+    ]
+
+    for (const endpoint of endpoints) {
+      console.log("📍 [PAGOS] Intentando endpoint:", endpoint)
+      const response = await fetch(endpoint)
+      console.log("📊 [PAGOS] Response status:", response.status, response.statusText)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("❌ [PAGOS] Error HTTP al cargar pagos:", response.status)
+        console.error("❌ [PAGOS] Error body (primeros 200 chars):", errorText.substring(0, 200))
+        continue
+      }
+
+      const text = await response.text()
+      if (!text || text.trim() === "") {
+        console.warn("⚠️ Respuesta de pagos vacía")
+        continue
+      }
+
+      try {
+        const data = JSON.parse(text)
+        console.log("📦 JSON parseado de pagos:", data)
+        console.log("📊 Tipo:", typeof data, "Es array:", Array.isArray(data))
+
+        if (Array.isArray(data)) {
+          console.log("✅ Es array, total elementos:", data.length)
+          console.log("📋 Elementos completos:", JSON.stringify(data, null, 2))
+          console.log("✅ Pagos recibidos para usuario", usuarioId, ":", data.length)
+          console.log("🔍 Estructura del primer pago recibido:", data[0])
+
+          if (data.length > 0) {
+            setPagosRecientes(data)
+            return
+          }
+        } else {
+          console.warn("⚠️ Respuesta de pagos no es array:", data)
+        }
+      } catch (parseErr) {
+        console.error("❌ Error parseando pagos JSON:", parseErr)
+        console.error("📄 Respuesta recibida (primeros 500 chars):", text.substring(0, 500))
+        if (text.includes("<")) {
+          console.error("❌ Parece ser HTML error del servidor, no JSON válido")
+        }
+      }
+    }
+
+    setPagosRecientes([])
+  }
+
   // Obtener usuario del localStorage
   useEffect(() => {
     try {
@@ -216,57 +270,7 @@ export function Pagos() {
         // Fetch pagos recientes
         try {
           const usuarioIdPagos = "1"
-          const urlPagos = `${apiUrl}/api/pagos?usuarioId=${usuarioIdPagos}`
-          
-          // ✅ VALIDACIÓN DE URL: Verificar que NO contenga ':' en el ID
-          if (urlPagos.includes('usuarioId=:') || urlPagos.match(/usuarioId=\d+:/)) {
-            console.error("❌ [PAGOS] URL PAGOS CORRUPTA:", urlPagos)
-            setPagosRecientes([])
-          } else {
-            console.log("📍 [PAGOS] URL FINAL PAGOS:", urlPagos)
-            
-            const resPagos = await fetch(urlPagos)
-            console.log("📊 [PAGOS] Response status:", resPagos.status, resPagos.statusText)
-            
-            // ✅ EVITAR ERROR DE JSON: Solo parsear si response.ok es true
-            if (!resPagos.ok) {
-              console.error("❌ [PAGOS] Error HTTP al cargar pagos:", resPagos.status)
-              const errorText = await resPagos.text()
-              console.error("❌ [PAGOS] Error body (primeros 200 chars):", errorText.substring(0, 200))
-              setPagosRecientes([])
-            } else {
-              const text = await resPagos.text()
-            
-              if (!text || text.trim() === "") {
-                console.warn("⚠️ Respuesta de pagos vacía")
-                setPagosRecientes([])
-              } else {
-                try {
-                  const data = JSON.parse(text)
-                  console.log("📦 JSON parseado de pagos:", data)
-                  console.log("📊 Tipo:", typeof data, "Es array:", Array.isArray(data))
-                  
-                  if (Array.isArray(data)) {
-                    console.log("✅ Es array, total elementos:", data.length)
-                    console.log("📋 Elementos completos:", JSON.stringify(data, null, 2))
-                    console.log("✅ Pagos recibidos para usuario", usuarioIdPagos, ":", data.length)
-                    console.log("🔍 Estructura del primer pago recibido:", data[0])
-                    setPagosRecientes(data)
-                  } else {
-                    console.warn("⚠️ Respuesta de pagos no es array:", data)
-                    setPagosRecientes([])
-                  }
-                } catch (parseErr) {
-                  console.error("❌ Error parseando pagos JSON:", parseErr)
-                  console.error("📄 Respuesta recibida (primeros 500 chars):", text.substring(0, 500))
-                  if (text.includes("<")) {
-                    console.error("❌ Parece ser HTML error del servidor, no JSON válido")
-                  }
-                  setPagosRecientes([])
-                }
-              }
-            }
-          }
+          await fetchPagosRecientes(apiUrl, usuarioIdPagos)
         } catch (err) {
           console.error("❌ Error fetching pagos:", err)
           setPagosRecientes([])
@@ -360,34 +364,8 @@ export function Pagos() {
 
           // Refetch pagos recientes
           const usuarioIdPagos = "1"
-          const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${usuarioIdPagos}`)
           console.log("🔄 [REFETCH] GET /api/pagos?usuarioId=", usuarioIdPagos)
-          console.log("📊 [REFETCH] Response status:", resPagos.status)
-          
-          if (resPagos.ok) {
-            const text = await resPagos.text()
-            console.log("📥 [REFETCH] Respuesta recibida (primeros 200 chars):", text.substring(0, 200))
-            
-            if (text && text.trim() !== "" && !text.includes("<")) {
-              try {
-                const data = JSON.parse(text)
-                console.log("✅ [REFETCH] JSON parseado:", data)
-                
-                if (Array.isArray(data)) {
-                  console.log("✅ [REFETCH] Pagos en array:", data.length)
-                  console.log("✅ [REFETCH] Pagos recibidos para usuario", usuarioIdPagos, ":", data.length)
-                  console.log("🔍 [REFETCH] Estructura del primer pago recibido:", data[0])
-                  setPagosRecientes(data)
-                }
-              } catch (err) {
-                console.error("❌ [REFETCH] Error parseando pagos:", err)
-              }
-            } else {
-              console.warn("⚠️ [REFETCH] Respuesta vacía o contiene HTML")
-            }
-          } else {
-            console.error("❌ [REFETCH] Error HTTP al refetch pagos:", resPagos.status)
-          }
+          await fetchPagosRecientes(apiUrl, usuarioIdPagos)
 
           setSubmitSuccess(false)
           router.refresh()
