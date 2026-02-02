@@ -458,6 +458,8 @@ export function Pagos() {
     )
   }
 
+  console.log("DATOS PARA TABLA:", pagosRecientes)
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -734,7 +736,7 @@ export function Pagos() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pagosRecientes.map((pago) => {
+                {pagosRecientes?.map((pago) => {
                   const estadoPago = pago.estado || pago.estadoPago || "PENDIENTE"
                   const statusConfig = getStatusConfig(estadoPago)
                   const metodoPago = pago.metodo_pago || ""
