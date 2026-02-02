@@ -79,7 +79,6 @@ export function OperatorDashboard() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState<string>("")
   const [statusFilter, setStatusFilter] = useState<string>("TODOS")
-  const [statusFilter, setStatusFilter] = useState("TODOS")
 
   const handleSearch = async () => {
     if (!trackingNumber) return
@@ -368,19 +367,6 @@ export function OperatorDashboard() {
     const coincideEstado = statusFilter === "TODOS" || estado === statusFilter
     
     return coincideTexto && coincideEstado
-  })
-
-  // ✅ LÓGICA DE FILTRADO
-  const paquetesFiltrados = todosPaquetes.filter((pkg) => {
-    const tracking = (pkg.trackingNumber || pkg.tracking || "").toString().toLowerCase()
-    const cliente = (pkg.usuario?.nombre || pkg.cliente || "").toString().toLowerCase()
-    const estado = (pkg.estado || "").toString().toUpperCase()
-    const search = searchTerm.toLowerCase()
-    
-    const matchSearch = tracking.includes(search) || cliente.includes(search)
-    const matchStatus = statusFilter === "TODOS" || estado === statusFilter
-    
-    return matchSearch && matchStatus
   })
 
   // ✅ OPCIONES DE ESTADO PARA FILTRO
