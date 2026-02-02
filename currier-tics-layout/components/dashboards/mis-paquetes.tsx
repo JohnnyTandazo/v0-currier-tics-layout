@@ -71,9 +71,8 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
         const misPaquetes = data.filter((p: any) => {
           // Intentamos obtener el ID del paquete de varias formas posibles
           const packUserId = p.usuarioId || p.usuario?.id || p.id_usuario
-          const myUserId = usuario.id || usuario.usuarioId
-          // Comparamos como Strings para evitar errores de tipo (3 vs "3")
-          return String(packUserId) === String(myUserId)
+          // ✅ USAR ID LIMPIO PARA COMPARACIÓN
+          return String(packUserId) === String(cleanId)
         })
 
         console.log("PAQUETES FILTRADOS:", misPaquetes)

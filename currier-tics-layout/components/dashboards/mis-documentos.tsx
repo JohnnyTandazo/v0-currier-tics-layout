@@ -20,23 +20,37 @@ export default function MisDocumentos() {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        // Cargar Envíos
+        // Cargar Envíos con ID sanitizado
         const user = localStorage.getItem("usuario")
         if (user) {
-          const { id } = JSON.parse(user)
-          try {
-            const resEnvios = await fetch(`/api/envios/usuario/${id}`)
-            const textEnvios = await resEnvios.text()
-            
-            if (!textEnvios || textEnvios.trim() === "") {
-              setEnvios([])
-            } else {
-              const dataEnvios = JSON.parse(textEnvios)
-              setEnvios(Array.isArray(dataEnvios) ? dataEnvios : [])
-            }
-          } catch (envioError) {
-            console.error("❌ Error fetching envios:", envioError)
+          const usuarioObj = JSON.parse(user)
+          // ✅ SANITIZAR ID ANTES DE LLAMAR AL BACKEND
+          const idLimpio = String(usuarioObj.id).split(':')[0].trim()
+          console.log("🛠️ [MIS-DOCS] Sanitizando ID:", usuarioObj.id, "-> ID Limpio:", idLimpio)
+          
+          if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
+            console.error("❌ [MIS-DOCS] ID inválido:", idLimpio)
             setEnvios([])
+          } else {
+            try {
+              const resEnvios = await fetch(`/api/envios/usuario/${idLimpio}`)
+              const textEnvios = await resEnvios.text()
+              
+              console.log("📊 [MIS-DOCS] Response status:", resEnvios.status)
+              console.log("📊 [MIS-DOCS] Response length:", textEnvios.length)
+              
+              if (!textEnvios || textEnvios.trim() === "") {
+                console.warn("⚠️ [MIS-DOCS] Respuesta vacía")
+                setEnvios([])
+              } else {
+                const dataEnvios = JSON.parse(textEnvios)
+                console.log("✅ [MIS-DOCS] Envíos cargados:", dataEnvios.length)
+                setEnvios(Array.isArray(dataEnvios) ? dataEnvios : [])
+              }
+            } catch (envioError) {
+              console.error("❌ [MIS-DOCS] Error fetching envios:", envioError)
+              setEnvios([])
+            }
           }
         }
 

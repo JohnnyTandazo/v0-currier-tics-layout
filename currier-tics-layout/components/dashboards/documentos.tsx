@@ -115,22 +115,38 @@ export function Documentos() {
 
     const cargarEnvios = async () => {
       try {
-        const response = await fetch(`/api/envios/usuario/${userId}`)
+        // ✅ SANITIZAR ID ANTES DE LLAMAR AL BACKEND
+        const idLimpio = String(userId).split(':')[0].trim()
+        console.log("🛠️ [DOCUMENTOS] Sanitizando ID:", userId, "-> ID Limpio:", idLimpio)
+        
+        if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
+          console.error("❌ [DOCUMENTOS] ID inválido:", idLimpio)
+          setEnvios([])
+          setIsLoadingEnvios(false)
+          return
+        }
+        
+        const response = await fetch(`/api/envios/usuario/${idLimpio}`)
         const text = await response.text()
         
+        console.log("📊 [DOCUMENTOS] Response status:", response.status)
+        console.log("📊 [DOCUMENTOS] Response length:", text.length)
+        
         if (!text || text.trim() === "") {
+          console.warn("⚠️ [DOCUMENTOS] Respuesta vacía")
           setEnvios([])
         } else {
           try {
             const data = JSON.parse(text)
+            console.log("✅ [DOCUMENTOS] Envíos cargados:", data.length)
             setEnvios(Array.isArray(data) ? data : [])
           } catch (parseError) {
-            console.error("❌ Error parsing JSON:", parseError)
+            console.error("❌ [DOCUMENTOS] Error parsing JSON:", parseError)
             setEnvios([])
           }
         }
       } catch (error) {
-        console.error("❌ Error cargando envíos:", error)
+        console.error("❌ [DOCUMENTOS] Error cargando envíos:", error)
         setEnvios([])
       } finally {
         setIsLoadingEnvios(false)
