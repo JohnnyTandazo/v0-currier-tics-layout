@@ -270,9 +270,14 @@ export function OperatorDashboard() {
         const text = await resPagos.text()
         if (text && text.trim() !== "") {
           const pagos = JSON.parse(text)
+          console.log('✅ Pagos recibidos del backend:', pagos)
           // El backend ya devuelve solo pendientes, no necesitamos filtrar
           setPagosPendientes(Array.isArray(pagos) ? pagos : [])
+        } else {
+          console.log('⚠️ Respuesta vacía del endpoint /api/pagos/pendientes')
         }
+      } else {
+        console.log('❌ Error en fetch /api/pagos/pendientes:', resPagos.status, resPagos.statusText)
       }
     } catch (err) {
       console.error("Error cargando datos:", err)
