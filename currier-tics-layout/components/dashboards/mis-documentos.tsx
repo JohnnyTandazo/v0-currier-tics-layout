@@ -35,7 +35,8 @@ export default function MisDocumentos() {
             setEnvios([])
           } else {
             try {
-              const url = `/api/envios/usuario/${idLimpio}`
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
+              const url = `${apiUrl}/api/envios/usuario/${idLimpio}`
               
               // ✅ VALIDACIÓN DE URL: Verificar que NO contenga ':'
               if (url.includes('/usuario/:') || url.match(/\/usuario\/\d+:/)) {
