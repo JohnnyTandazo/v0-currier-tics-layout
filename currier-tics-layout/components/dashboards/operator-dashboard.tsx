@@ -257,23 +257,21 @@ export function OperatorDashboard() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       if (!apiUrl) return
 
-      // Cargar todos los paquetes
-      const resPaquetes = await fetch(`${apiUrl}/api/paquetes`)
+      // Cargar todos los paquetes (endpoint de administración)
+      const resPaquetes = await fetch(`${apiUrl}/api/paquetes/todos`)
       if (resPaquetes.ok) {
         const paquetes = await resPaquetes.json()
         setTodosPaquetes(Array.isArray(paquetes) ? paquetes : [])
       }
 
-      // Cargar pagos pendientes
-      const resPagos = await fetch(`${apiUrl}/api/pagos`)
+      // Cargar pagos pendientes (endpoint específico que ya filtra)
+      const resPagos = await fetch(`${apiUrl}/api/pagos/pendientes`)
       if (resPagos.ok) {
         const text = await resPagos.text()
         if (text && text.trim() !== "") {
           const pagos = JSON.parse(text)
-          const pendientes = Array.isArray(pagos) 
-            ? pagos.filter((p: any) => p.estado === "PENDIENTE") 
-            : []
-          setPagosPendientes(pendientes)
+          // El backend ya devuelve solo pendientes, no necesitamos filtrar
+          setPagosPendientes(Array.isArray(pagos) ? pagos : [])
         }
       }
     } catch (err) {
