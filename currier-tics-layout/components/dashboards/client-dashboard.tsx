@@ -33,6 +33,14 @@ interface Paquete {
   createdAt?: string
 }
 
+interface Factura {
+  id: number
+  monto: number
+  estado: "PENDIENTE" | "POR_PAGAR" | "PAGADA" | "CONFIRMADO" | "EN_PROCESO" | string
+  usuarioId: number
+  usuario?: { id: number }
+}
+
 interface Stats {
   miami: number
   enCamino: number
@@ -101,6 +109,31 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
       // Guardar los paquetes filtrados para la tabla
       setPaquetes(misDatos)
 
+      // ✅ OBTENER FACTURAS PARA CALCULAR DEUDA REAL
+      let deudaTotal = 0
+      try {
+        const idLimpio = String(userStored.id).split(':')[0].trim()
+        const facturasResponse = await fetch(`${apiUrl}/api/facturas/usuario/${idLimpio}`)
+        
+        if (facturasResponse.ok) {
+          const textFacturas = await facturasResponse.text()
+          if (textFacturas && textFacturas.trim() !== "") {
+            const facturas: Factura[] = JSON.parse(textFacturas)
+            
+            // ✅ SUMAR SOLO FACTURAS PENDIENTES/POR_PAGAR
+            deudaTotal = facturas
+              .filter((f: Factura) => 
+                f.estado === "PENDIENTE" || 
+                f.estado === "POR_PAGAR"
+              )
+              .reduce((sum: number, f: Factura) => sum + (f.monto || 0), 0)
+          }
+        }
+      } catch (err) {
+        console.error("Error obteniendo facturas:", err)
+        deudaTotal = 0
+      }
+
       // CALCULAR ESTADÍSTICAS SOLO CON MIS DATOS
       setStats({
         totalPaquetes: misDatos.length,
@@ -111,9 +144,7 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
         porPagar: misDatos.filter(
           (p: any) => p.estado === "ENTREGADO" || p.estado === "POR_PAGAR" || p.estado === "ADUANA"
         ).length,
-        deuda: misDatos
-          .filter((p: any) => !p.pagado)
-          .reduce((acc: number, p: any) => acc + (p.precio || 0), 0),
+        deuda: deudaTotal,
         notificaciones: 0,
       })
     } catch (e) {
@@ -320,17 +351,17 @@ export function ClientDashboard({ onViewTracking }: ClientDashboardProps) {
           </CardContent>
         </Card>
 
-        {/* Deuda Total */}
+        {/* Saldo Pendiente */}
         <Card className="border-l-4 border-l-red-500 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              Deuda Total
+              Saldo Pendiente
             </CardTitle>
             <DollarSign className="h-5 w-5 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">${stats.deuda.toFixed(2)}</div>
-            <p className="text-xs text-gray-500 mt-1">Pendiente</p>
+            <p className="text-xs text-gray-500 mt-1">Facturas pendientes</p>
           </CardContent>
         </Card>
 
