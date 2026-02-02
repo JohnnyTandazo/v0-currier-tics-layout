@@ -77,9 +77,8 @@ export function OperatorDashboard() {
   const [pagosPendientes, setPagosPendientes] = useState<any[]>([])
   const [todosPaquetes, setTodosPaquetes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("TODOS")
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = useState<string>("")
+  const [statusFilter, setStatusFilter] = useState<string>("TODOS")
   const [statusFilter, setStatusFilter] = useState("TODOS")
 
   const handleSearch = async () => {
@@ -350,17 +349,25 @@ export function OperatorDashboard() {
     return "INTERNACIONAL"
   }
 
-  // ✅ LÓGICA DE FILTRADO DE PAQUETES
+  // ✅ LÓGICA DE FILTRADO DE PAQUETES (con null safety)
   const paquetesFiltrados = todosPaquetes.filter((pkg) => {
-    const tracking = (pkg.trackingNumber || pkg.tracking || "").toString().toLowerCase()
-    const cliente = (pkg.usuario?.nombre || pkg.cliente || "").toString().toLowerCase()
-    const estado = (pkg.estado || "").toString().toUpperCase()
-    const search = searchTerm.toLowerCase()
+    // 1. Extraer y normalizar valores (proteger contra null/undefined)
+    const trackingValue = pkg?.trackingNumber || pkg?.tracking || ""
+    const tracking = String(trackingValue).toLowerCase().trim()
     
-    const matchSearch = tracking.includes(search) || cliente.includes(search)
-    const matchStatus = statusFilter === "TODOS" || estado === statusFilter
+    const clienteValue = pkg?.usuario?.nombre || pkg?.cliente || ""
+    const cliente = String(clienteValue).toLowerCase().trim()
     
-    return matchSearch && matchStatus
+    const estadoValue = pkg?.estado || ""
+    const estado = String(estadoValue).toUpperCase().trim()
+    
+    const search = String(searchTerm || "").toLowerCase().trim()
+    
+    // 2. Aplicar filtros
+    const coincideTexto = tracking.includes(search) || cliente.includes(search)
+    const coincideEstado = statusFilter === "TODOS" || estado === statusFilter
+    
+    return coincideTexto && coincideEstado
   })
 
   // ✅ LÓGICA DE FILTRADO
