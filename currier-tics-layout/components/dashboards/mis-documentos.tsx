@@ -213,10 +213,14 @@ export default function MisDocumentos() {
                         <TableCell className="text-right">
                           {pkg.estado === "PAGADA" ? (
                             <Button size="sm" variant="default">
-                              <FileText className="mr-2 h-4 w-4" /> Descargar PDF
+                              <FileText className="mr-2 h-4 w-4" /> Ver Factura
                             </Button>
+                          ) : pkg.estado === "PROCESANDO" ? (
+                            <Badge variant="outline">En Procesamiento</Badge>
                           ) : (
-                            <Badge variant="secondary">{pkg.estado || "PENDIENTE"}</Badge>
+                            <Button size="sm" variant="outline">
+                              <FileText className="mr-2 h-4 w-4" /> Ver Factura
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
