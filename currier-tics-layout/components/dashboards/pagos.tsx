@@ -137,7 +137,7 @@ export function Pagos() {
           console.log("✅ Es array, total elementos:", data.length)
           console.log("📋 Elementos completos:", JSON.stringify(data, null, 2))
           console.log("✅ Pagos recibidos para usuario", usuarioId, ":", data.length)
-          console.log("🔍 Estructura del primer pago recibido:", data[0])
+          console.log("PAGO REAL:", data[0])
 
           if (data.length > 0) {
             setPagosRecientes(data)
@@ -737,7 +737,7 @@ export function Pagos() {
                 {pagosRecientes.map((pago) => {
                   const estadoPago = pago.estado || pago.estadoPago || "PENDIENTE"
                   const statusConfig = getStatusConfig(estadoPago)
-                  const metodoPago = pago.metodoPago || ""
+                  const metodoPago = pago.metodo_pago || ""
                   const referenciaPago = pago.referencia || ""
                   const fechaPago = pago.fecha
                     ? new Date(pago.fecha).toLocaleDateString("es-EC", {
