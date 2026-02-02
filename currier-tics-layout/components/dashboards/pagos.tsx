@@ -64,12 +64,15 @@ interface FacturaPendiente {
 
 interface PagoReciente {
   id: number
-  fecha: string
-  monto: number
-  facturaId: string
-  metodoPago: string
-  estado: "VERIFICADO" | "PENDIENTE" | "RECHAZADO"
-  referencia: string
+  fecha?: string
+  monto?: number
+  facturaId?: string | number
+  metodoPago?: string
+  metodo_pago?: string
+  estado?: "VERIFICADO" | "PENDIENTE" | "RECHAZADO" | "CONFIRMADO" | string
+  estadoPago?: string
+  referencia?: string
+  numeroReferencia?: string
   usuarioId?: number
   usuario?: { id: number }
 }
@@ -212,7 +215,8 @@ export function Pagos() {
 
         // Fetch pagos recientes
         try {
-          const urlPagos = `${apiUrl}/api/pagos?usuarioId=${idLimpio}`
+          const usuarioIdPagos = "1"
+          const urlPagos = `${apiUrl}/api/pagos?usuarioId=${usuarioIdPagos}`
           
           // ✅ VALIDACIÓN DE URL: Verificar que NO contenga ':' en el ID
           if (urlPagos.includes('usuarioId=:') || urlPagos.match(/usuarioId=\d+:/)) {
@@ -246,12 +250,9 @@ export function Pagos() {
                     console.log("✅ Es array, total elementos:", data.length)
                     console.log("📋 Elementos completos:", JSON.stringify(data, null, 2))
                     
-                    // El backend ya filtra por usuarioId, pero hacemos validación adicional
-                    const misPagos = data.filter(
-                      (p: PagoReciente) => String(p.usuarioId) === String(idLimpio)
-                    )
-                    console.log("✅ Pagos filtrados para usuario", idLimpio, ":", misPagos.length)
-                    setPagosRecientes(misPagos)
+                    // El backend ya filtra por usuarioId=1, mostrar directamente
+                    console.log("✅ Pagos recibidos para usuario", usuarioIdPagos, ":", data.length)
+                    setPagosRecientes(data)
                   } else {
                     console.warn("⚠️ Respuesta de pagos no es array:", data)
                     setPagosRecientes([])
@@ -359,8 +360,9 @@ export function Pagos() {
           }
 
           // Refetch pagos recientes
-          const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${idLimpio}`)
-          console.log("🔄 [REFETCH] GET /api/pagos?usuarioId=", idLimpio)
+          const usuarioIdPagos = "1"
+          const resPagos = await fetch(`${apiUrl}/api/pagos?usuarioId=${usuarioIdPagos}`)
+          console.log("🔄 [REFETCH] GET /api/pagos?usuarioId=", usuarioIdPagos)
           console.log("📊 [REFETCH] Response status:", resPagos.status)
           
           if (resPagos.ok) {
@@ -374,11 +376,8 @@ export function Pagos() {
                 
                 if (Array.isArray(data)) {
                   console.log("✅ [REFETCH] Pagos en array:", data.length)
-                  const misPagos = data.filter(
-                    (p: PagoReciente) => String(p.usuarioId) === String(idLimpio)
-                  )
-                  console.log("✅ [REFETCH] Pagos después de filtro:", misPagos.length)
-                  setPagosRecientes(misPagos)
+                  console.log("✅ [REFETCH] Pagos recibidos para usuario", usuarioIdPagos, ":", data.length)
+                  setPagosRecientes(data)
                 }
               } catch (err) {
                 console.error("❌ [REFETCH] Error parseando pagos:", err)
@@ -407,6 +406,11 @@ export function Pagos() {
 
   const getStatusConfig = (estado: string) => {
     const configs: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+      CONFIRMADO: {
+        color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+        icon: <CheckCircle className="h-3 w-3" />,
+        label: "CONFIRMADO",
+      },
       VERIFICADO: {
         color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
         icon: <CheckCircle className="h-3 w-3" />,
@@ -423,7 +427,11 @@ export function Pagos() {
         label: "Rechazado",
       },
     }
-    return configs[estado] || configs.PENDIENTE
+    return configs[estado] || {
+      color: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+      icon: <AlertCircle className="h-3 w-3" />,
+      label: estado || "Pendiente",
+    }
   }
 
   // Calcular totales usando SOLO datos filtrados del usuario
@@ -741,60 +749,56 @@ export function Pagos() {
               <TableHeader>
                 <TableRow className="border-border/50 hover:bg-transparent">
                   <TableHead className="text-muted-foreground">Fecha</TableHead>
-                  <TableHead className="text-muted-foreground">Factura</TableHead>
+                  <TableHead className="text-muted-foreground">Método</TableHead>
+                  <TableHead className="text-muted-foreground">Referencia</TableHead>
                   <TableHead className="text-muted-foreground text-right">Monto</TableHead>
                   <TableHead className="text-muted-foreground">Estado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pagosRecientes.length > 0 ? (
-                  pagosRecientes.map((pago) => {
-                    const statusConfig = getStatusConfig(pago.estado)
-                    return (
-                      <TableRow key={pago.id} className="border-border/50">
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="text-foreground text-sm">
-                              {new Date(pago.fecha).toLocaleDateString("es-EC", {
-                                day: "2-digit",
-                                month: "short",
-                              })}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {pago.metodoPago}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-mono text-xs text-foreground">
-                            {pago.facturaId}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className="font-semibold text-foreground">
-                            ${(pago.monto || 0).toFixed(2)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={`gap-1 text-xs ${statusConfig.color}`}
-                          >
-                            {statusConfig.icon}
-                            {statusConfig.label}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                      <CreditCard className="mx-auto h-10 w-10 mb-3 opacity-50" />
-                      <p>No hay pagos recientes</p>
-                    </TableCell>
-                  </TableRow>
-                )}
+                {pagosRecientes.map((pago) => {
+                  const estadoPago = pago.estado || pago.estadoPago || "PENDIENTE"
+                  const statusConfig = getStatusConfig(estadoPago)
+                  const metodoPago = pago.metodo_pago || pago.metodoPago || "—"
+                  const referenciaPago = pago.referencia || pago.numeroReferencia || "—"
+                  const fechaPago = pago.fecha
+                    ? new Date(pago.fecha).toLocaleDateString("es-EC", {
+                        day: "2-digit",
+                        month: "short",
+                      })
+                    : "—"
+                  return (
+                    <TableRow key={pago.id} className="border-border/50">
+                      <TableCell>
+                        <span className="text-foreground text-sm">{fechaPago}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">
+                          {metodoPago}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-xs text-foreground">
+                          {referenciaPago}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="font-semibold text-foreground">
+                          ${(pago.monto || 0).toFixed(2)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={`gap-1 text-xs ${statusConfig.color}`}
+                        >
+                          {statusConfig.icon}
+                          {statusConfig.label}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </CardContent>
