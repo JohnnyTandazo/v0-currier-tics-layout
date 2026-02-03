@@ -86,6 +86,8 @@ export function PreAlertModal({ open, onOpenChange }: PreAlertModalProps) {
         .replace(/[-:.TZ]/g, "")}`;
       const finalTrackingNumber = trackingNumber || generatedTrackingNumber;
 
+      const esNacional = String(tipoEnvio || "").toUpperCase() === "NACIONAL" || String(tipoEnvio || "").toUpperCase() === "LOCAL"
+
       // POST to backend
       const response = await fetch(`${apiUrl}/api/paquetes`, {
         method: "POST",
@@ -97,6 +99,7 @@ export function PreAlertModal({ open, onOpenChange }: PreAlertModalProps) {
           precio: price,
           usuarioId: Number(usuarioId),
           tipo_envio: tipoEnvio, // Include tipo_envio
+          ...(esNacional ? { origen: "Local", tipoEnvio: "NACIONAL" } : {}),
           estado: "PRE_ALERTA", // Default estado
         }),
       });

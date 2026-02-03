@@ -34,7 +34,7 @@ export default function MisDocumentos() {
   const handleDownloadFactura = async (paqueteId: number) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
     await securePdfDownload({
-      url: `${apiUrl}/api/pdf/factura/${paqueteId}`,
+      url: `${apiUrl}/api/facturas/${paqueteId}/pdf`,
       nombreArchivo: `factura-${paqueteId}.pdf`,
       token: usuarioToken || undefined,
     })

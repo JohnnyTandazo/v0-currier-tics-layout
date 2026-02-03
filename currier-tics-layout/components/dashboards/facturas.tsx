@@ -434,7 +434,7 @@ export function Facturas() {
     }
 
     await securePdfDownload({
-      url: `${apiUrl}/api/pdf/factura/${paquete.id}`,
+      url: `${apiUrl}/api/facturas/${paquete.id}/pdf`,
       nombreArchivo: `factura-${paquete.id}.pdf`,
       token: usuarioToken || undefined,
     });
@@ -634,6 +634,9 @@ export function Facturas() {
                   <TableBody>
                     {paquetesFiltrados.map((paquete) => {
                       const isHighlighted = searchParams?.get("id") === String(paquete.id);
+                      const estadoUpper = String(paquete.estado || "").toUpperCase();
+                      const isPagado = estadoUpper === "PAGADO" || paquete.pagado === true;
+                      const isPendiente = estadoUpper === "PENDIENTE";
                       return (
                         <TableRow 
                           key={paquete.id} 
@@ -660,10 +663,23 @@ export function Facturas() {
                                   size="sm"
                                   onClick={() => handleAbrirPago(paquete)}
                                   className="bg-red-600 hover:bg-red-700"
+                                  disabled={isPagado || isPendiente}
                                 >
                                   <DollarSign className="h-4 w-4 mr-1" />
                                   Pagar
                                 </Button>
+                              )}
+
+                              {isPendiente && (
+                                <span className="text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                                  Pendiente
+                                </span>
+                              )}
+
+                              {isPagado && (
+                                <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-1 rounded">
+                                  Pagado
+                                </span>
                               )}
 
                               {estaPagado(paquete) && (
