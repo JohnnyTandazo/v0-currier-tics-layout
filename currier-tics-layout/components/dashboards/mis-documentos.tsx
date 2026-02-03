@@ -16,6 +16,8 @@ export default function MisDocumentos() {
   const [paquetes, setPaquetes] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedEnvio, setSelectedEnvio] = useState<any>(null)
+  const [usuarioEmail, setUsuarioEmail] = useState<string | null>(null)
+  const [usuarioId, setUsuarioId] = useState<string | null>(null)
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -25,6 +27,10 @@ export default function MisDocumentos() {
         if (user) {
           const usuarioObj = JSON.parse(user)
           const idLimpio = String(usuarioObj.id).split(':')[0].trim()
+          const emailUsuario = usuarioObj?.email ? String(usuarioObj.email).trim() : null
+
+          setUsuarioEmail(emailUsuario)
+          setUsuarioId(idLimpio)
           
           if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
             setEnvios([])
@@ -64,14 +70,36 @@ export default function MisDocumentos() {
 
         // Cargar Paquetes (Importaciones)
         try {
-          const resPaquetes = await fetch("/api/paquetes")
+          const idLimpio = usuarioId || (user ? String(JSON.parse(user).id).split(':')[0].trim() : "")
+          const urlPaquetes = idLimpio
+            ? `/api/paquetes?usuarioId=${encodeURIComponent(idLimpio)}`
+            : `/api/paquetes`
+
+          const resPaquetes = await fetch(urlPaquetes)
           const textPaquetes = await resPaquetes.text()
           
           if (!textPaquetes || textPaquetes.trim() === "") {
             setPaquetes([])
           } else {
             const dataPaquetes = JSON.parse(textPaquetes)
-            setPaquetes(Array.isArray(dataPaquetes) ? dataPaquetes : [])
+            const paquetesArray = Array.isArray(dataPaquetes) ? dataPaquetes : []
+
+            // ✅ FILTRO DE SEGURIDAD CLIENT-SIDE (fallback)
+            const emailUsuario = usuarioEmail || (user ? String(JSON.parse(user).email || "").trim() : "")
+            const idUsuario = idLimpio
+
+            const filtrados = paquetesArray.filter((item: any) => {
+              const emailItem = item?.usuario?.email ? String(item.usuario.email).trim() : ""
+              const usuarioIdItem = String(item?.usuarioId || item?.usuario?.id || "").trim()
+
+              if (emailUsuario) {
+                return emailItem.toLowerCase() === emailUsuario.toLowerCase()
+              }
+
+              return idUsuario ? usuarioIdItem === String(idUsuario) : false
+            })
+
+            setPaquetes(filtrados)
           }
         } catch (paqueteError) {
 
