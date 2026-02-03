@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 interface Direccion {
   id: string
@@ -301,7 +302,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
       const response = await fetch("/api/envios", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(payload),
       })
 

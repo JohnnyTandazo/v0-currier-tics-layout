@@ -15,6 +15,7 @@ import {
 } from "../ui/table"
 import { Package, Plane, MapPin, DollarSign, Bell, CreditCard, AlertCircle, Eye, Plus, Loader2 } from "lucide-react"
 import { safeFetch } from "@/lib/safeFetch"
+import { withAuthHeaders } from "@/lib/authHeaders"
 import { formatearFecha } from "@/lib/formatDate"
 import { PreAlertModal } from "../modals/pre-alert-modal"
 import { PaymentModal } from "./payment-modal"
@@ -114,7 +115,10 @@ export function ClientDashboard({ onViewTracking, onClientViewChange }: ClientDa
       let deudaTotal = 0
       try {
         const idLimpio = String(userStored.id).split(':')[0].trim()
-        const facturasResponse = await fetch(`${apiUrl}/api/facturas/usuario/${idLimpio}`)
+        const facturasResponse = await fetch(`${apiUrl}/api/facturas/usuario/${idLimpio}`, {
+          method: "GET",
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
+        })
         
         if (facturasResponse.ok) {
           const textFacturas = await facturasResponse.text()
@@ -194,7 +198,7 @@ export function ClientDashboard({ onViewTracking, onClientViewChange }: ClientDa
 
       const response = await fetch(`${apiUrl}/api/paquetes/${paqueteAPagar.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ 
           estado: "PAGADO", 
           pagado: true,

@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 interface Direccion {
   id: string
@@ -59,7 +60,7 @@ export function AddressManager() {
     try {
       const response = await fetch("/api/direcciones", {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
       })
 
       if (!response.ok) {
@@ -116,7 +117,7 @@ export function AddressManager() {
     try {
       const response = await fetch("/api/direcciones", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           alias: form.alias,
           callePrincipal: form.callePrincipal,
@@ -161,6 +162,7 @@ export function AddressManager() {
     try {
       const response = await fetch(`/api/direcciones/${id}`, {
         method: "DELETE",
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
       })
 
       if (!response.ok) {

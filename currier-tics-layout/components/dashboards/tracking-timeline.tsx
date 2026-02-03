@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 interface TrackingTimelineProps {
   trackingId: string
@@ -58,9 +59,7 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
 
         const response = await fetch(url, {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
         })
 
         if (!response.ok) {

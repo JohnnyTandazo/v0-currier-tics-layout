@@ -16,6 +16,7 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
+    const authHeader = request.headers.get("authorization");
     // ✅ AWAIT params (Next.js 15+)
     const resolvedParams = await params;
     const idParam = resolvedParams.id;
@@ -56,6 +57,7 @@ export async function GET(
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
       cache: "no-store",
     });
@@ -177,6 +179,7 @@ export async function PUT(
   { params }: RouteParams
 ) {
   try {
+    const authHeader = request.headers.get("authorization");
     // ✅ AWAIT params (Next.js 15+)
     const resolvedParams = await params;
     const idParam = resolvedParams.id;
@@ -213,6 +216,7 @@ export async function PUT(
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
       body: JSON.stringify(body),
     });
@@ -288,6 +292,7 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
+    const authHeader = request.headers.get("authorization");
     // ✅ AWAIT params (Next.js 15+)
     const resolvedParams = await params;
     const idParam = resolvedParams.id;
@@ -318,6 +323,7 @@ export async function DELETE(
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
     });
 

@@ -92,6 +92,7 @@ export default function Home() {
     setCurrentClientView("dashboard")
     setUser(null)
     localStorage.removeItem("usuario")
+    localStorage.removeItem("token")
   }
 
   const handleViewTracking = (trackingId: string) => {

@@ -9,6 +9,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authHeader = request.headers.get("authorization");
     const { id } = await params;
 
     if (!id) {
@@ -22,6 +23,7 @@ export async function DELETE(
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
     });
 
@@ -50,6 +52,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authHeader = request.headers.get("authorization");
     const { id } = await params;
     const body = await request.json();
 
@@ -64,6 +67,7 @@ export async function PUT(
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
       body: JSON.stringify(body),
     });

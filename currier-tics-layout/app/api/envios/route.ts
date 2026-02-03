@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
   try {
     console.log("🔍 [API GET /api/envios] Solicitando lista de envíos");
 
+    const authHeader = request.headers.get("authorization");
+
     const { searchParams } = new URL(request.url);
     const usuarioId = searchParams.get("usuarioId");
 
@@ -23,6 +25,7 @@ export async function GET(request: NextRequest) {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
       cache: "no-store",
     });
@@ -81,6 +84,8 @@ export async function POST(request: NextRequest) {
   try {
     console.log("📦 [API POST /api/envios] Creando nuevo envío");
 
+    const authHeader = request.headers.get("authorization");
+
     const body = await request.json();
     console.log("📋 [API] Datos del nuevo envío:", body);
 
@@ -91,6 +96,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
       body: JSON.stringify(body),
     });

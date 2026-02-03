@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { formatearFecha } from "@/lib/formatDate"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 interface MisPaquetesProps {
   onViewTracking: (trackingId: string) => void
@@ -134,7 +135,10 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
         const url = `${apiUrl}/api/paquetes?usuarioId=${cleanId}`
 
-        const response = await fetch(url)
+        const response = await fetch(url, {
+          method: "GET",
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
+        })
         if (!response.ok) {
           setPaquetes([])
           return

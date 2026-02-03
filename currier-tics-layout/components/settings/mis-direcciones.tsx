@@ -36,6 +36,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 interface Direccion {
   id: string
@@ -150,7 +151,7 @@ export function MisDirectiones() {
 
         const response = await fetch(url, {
           method: "GET",
-          headers: { "Content-Type": "application/json" },
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
         })
 
         if (!response.ok) {
@@ -291,14 +292,14 @@ export function MisDirectiones() {
         // Actualizar
         response = await fetch(`/api/direcciones/${editingId}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload),
         })
       } else {
         // Crear nueva
         response = await fetch("/api/direcciones", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload),
         })
       }
@@ -348,7 +349,7 @@ export function MisDirectiones() {
       console.log("🗑️ Eliminando dirección ID:", id, "para usuarioId:", cleanId)
       const response = await fetch(`/api/direcciones/${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
       })
 
       if (!response.ok) {

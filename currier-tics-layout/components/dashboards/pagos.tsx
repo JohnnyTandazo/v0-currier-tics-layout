@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 interface Usuario {
   id: number
@@ -104,7 +105,10 @@ export function Pagos() {
   const fetchPagosRecientes = async (apiUrl: string, usuarioId: string) => {
     try {
       const endpoint = `${apiUrl}/api/pagos?usuarioId=${usuarioId}`
-      const response = await fetch(endpoint)
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
+      })
 
       if (!response.ok) {
         setPagosRecientes([])
@@ -173,7 +177,10 @@ export function Pagos() {
         // Fetch facturas pendientes
         try {
           const urlFacturas = `${apiUrl}/api/facturas/usuario/${idLimpio}`
-          const resFacturas = await fetch(urlFacturas)
+          const resFacturas = await fetch(urlFacturas, {
+            method: "GET",
+            headers: withAuthHeaders({ "Content-Type": "application/json" }),
+          })
           
           if (resFacturas.ok) {
             const text = await resFacturas.text()
@@ -238,6 +245,7 @@ export function Pagos() {
 
       const response = await fetch(`${apiUrl}/api/pagos`, {
         method: "POST",
+        headers: withAuthHeaders(),
         body: submitData,
       })
 
@@ -258,7 +266,10 @@ export function Pagos() {
           const idLimpio = String(usuario.id).split(':')[0].trim()
           
           // Refetch facturas pendientes
-          const resFacturas = await fetch(`${apiUrl}/api/facturas/usuario/${idLimpio}`)
+          const resFacturas = await fetch(`${apiUrl}/api/facturas/usuario/${idLimpio}`, {
+            method: "GET",
+            headers: withAuthHeaders({ "Content-Type": "application/json" }),
+          })
           if (resFacturas.ok) {
             const text = await resFacturas.text()
             if (text && text.trim() !== "") {

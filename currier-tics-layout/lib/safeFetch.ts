@@ -4,10 +4,16 @@
  * @param options - Opciones de fetch
  * @returns Objeto parseado o vacío si falla
  */
+import { withAuthHeaders } from "@/lib/authHeaders";
+
 export async function safeFetch(url: string, options?: RequestInit): Promise<any> {
   try {
     console.log(`📡 safeFetch iniciando: ${url}`);
-    const response = await fetch(url, options);
+    const mergedHeaders = withAuthHeaders(options?.headers || {});
+    const response = await fetch(url, {
+      ...options,
+      headers: mergedHeaders,
+    });
     
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     

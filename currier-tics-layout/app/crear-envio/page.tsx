@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 type Direccion = {
   id: string
@@ -53,7 +54,7 @@ export default function CrearEnvioPage() {
       try {
         const response = await fetch("/api/usuarios/me/direcciones", {
           method: "GET",
-          headers: { "Content-Type": "application/json" },
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
         })
 
         if (!response.ok) {

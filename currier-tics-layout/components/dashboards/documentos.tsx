@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Printer, Package, Truck, Loader2, FileText, AlertCircle } from "lucide-react"
 import { PDFDownloadLink } from "@react-pdf/renderer"
 import ShippingLabel from "@/components/pdf/shipping-label"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 // Función segura para extraer ID del localStorage
 const getSafeUserId = (): number | null => {
@@ -91,7 +92,10 @@ export function Documentos() {
           return
         }
         
-        const response = await fetch(`/api/paquetes?usuarioId=${cleanId}`)
+        const response = await fetch(`/api/paquetes?usuarioId=${cleanId}`, {
+          method: "GET",
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
+        })
         if (response.ok) {
           const data = await response.json()
           setPaquetes(Array.isArray(data) ? data : [])
@@ -140,7 +144,10 @@ export function Documentos() {
         
         console.log("📍 [DOCUMENTOS] URL FINAL:", url)
         
-        const response = await fetch(url)
+        const response = await fetch(url, {
+          method: "GET",
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
+        })
         console.log("📊 [DOCUMENTOS] Response status:", response.status)
         
         // ✅ EVITAR ERROR DE JSON: Solo parsear si response.ok es true

@@ -7,6 +7,8 @@
  * 4. Retorna fallback data si falla
  */
 
+import { withAuthHeaders } from "@/lib/authHeaders";
+
 interface DefensiveFetchOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   headers?: Record<string, string>;
@@ -40,10 +42,10 @@ export async function defensiveFetch<T>(
     try {
       const response = await fetch(url, {
         method,
-        headers: {
+        headers: withAuthHeaders({
           "Content-Type": "application/json",
           ...headers,
-        },
+        }),
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });

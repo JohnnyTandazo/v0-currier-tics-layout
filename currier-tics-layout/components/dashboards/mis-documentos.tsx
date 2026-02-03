@@ -10,7 +10,8 @@ import { Package, Truck, Printer, FileText, Loader2, Eye } from "lucide-react"
 import { PDFDownloadLink } from "@react-pdf/renderer"
 import ShippingLabel from "@/components/pdf/shipping-label"
 import { PDFPreviewModal } from "@/components/pdf/pdf-preview-modal"
-import { securePdfDownload, downloadPdfWithAuth } from "@/lib/securePdfDownload"
+import { securePdfDownload } from "@/lib/securePdfDownload"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 export default function MisDocumentos() {
   const [envios, setEnvios] = useState<any[]>([])
@@ -66,7 +67,10 @@ export default function MisDocumentos() {
               } else {
                 console.log("📍 [MIS-DOCS] URL FINAL:", url)
                 
-                const resEnvios = await fetch(url)
+                const resEnvios = await fetch(url, {
+                  method: "GET",
+                  headers: withAuthHeaders({ "Content-Type": "application/json" }),
+                })
                 
                 if (!resEnvios.ok) {
                   setEnvios([])
@@ -97,7 +101,10 @@ export default function MisDocumentos() {
             ? `/api/paquetes?usuarioId=${encodeURIComponent(idLimpio)}`
             : `/api/paquetes`
 
-          const resPaquetes = await fetch(urlPaquetes)
+          const resPaquetes = await fetch(urlPaquetes, {
+            method: "GET",
+            headers: withAuthHeaders({ "Content-Type": "application/json" }),
+          })
           const textPaquetes = await resPaquetes.text()
           
           if (!textPaquetes || textPaquetes.trim() === "") {

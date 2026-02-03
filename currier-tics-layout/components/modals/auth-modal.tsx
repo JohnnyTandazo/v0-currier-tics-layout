@@ -55,6 +55,10 @@ export function AuthModal({
 
       if (response.ok) {
         const data = await response.json();
+        const token = data?.token || data?.accessToken || data?.jwt || null;
+        if (token) {
+          localStorage.setItem("token", token);
+        }
         localStorage.setItem("usuario", JSON.stringify(data));
         onOpenChange(false);
         window.location.reload();
@@ -103,6 +107,10 @@ export function AuthModal({
       console.log("✅ Cuenta creada:", data);
 
       // Save to localStorage
+      const token = data?.token || data?.accessToken || data?.jwt || null;
+      if (token) {
+        localStorage.setItem("token", token);
+      }
       localStorage.setItem("usuario", JSON.stringify(data));
 
       // Close modal and reload page

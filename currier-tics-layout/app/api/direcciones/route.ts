@@ -6,6 +6,7 @@ console.log("🌍 Conectando a Backend:", `${BACKEND_URL}/api/direcciones`);
 
 export async function GET(request: NextRequest) {
   try {
+    const authHeader = request.headers.get("authorization");
     const searchParams = request.nextUrl.searchParams;
     const usuarioId = searchParams.get("usuarioId");
 
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          ...(authHeader ? { Authorization: authHeader } : {}),
         },
       }
     );
@@ -51,6 +53,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authHeader = request.headers.get("authorization");
     const body = await request.json();
 
     if (!body.usuarioId) {
@@ -66,6 +69,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
       body: JSON.stringify(body),
     });

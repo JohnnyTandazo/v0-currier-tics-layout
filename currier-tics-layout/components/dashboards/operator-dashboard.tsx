@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 interface PackageInfo {
   trackingId: string
@@ -87,7 +88,10 @@ export function OperatorDashboard() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL
       if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL no configurada")
 
-      const res = await fetch(`${apiUrl}/api/paquetes`)
+      const res = await fetch(`${apiUrl}/api/paquetes`, {
+        method: "GET",
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
+      })
       if (!res.ok) throw new Error("Error en la respuesta del servidor")
       const paquetes = await res.json()
 
@@ -193,7 +197,10 @@ export function OperatorDashboard() {
 
       if (!idToUpdate) {
         // Fetch paquetes and find by tracking number
-        const res = await fetch(`${apiUrl}/api/paquetes`)
+        const res = await fetch(`${apiUrl}/api/paquetes`, {
+          method: "GET",
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
+        })
         if (!res.ok) throw new Error("Error al obtener paquetes")
         const paquetes = await res.json()
         const found = paquetes.find((p: any) => {
@@ -217,7 +224,7 @@ export function OperatorDashboard() {
 
       const putRes = await fetch(`${apiUrl}/api/paquetes/${idToUpdate}/detalles`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(body),
       })
 
@@ -261,14 +268,20 @@ export function OperatorDashboard() {
       if (!apiUrl) return
 
       // Cargar todos los paquetes (endpoint de administración)
-      const resPaquetes = await fetch(`${apiUrl}/api/paquetes/todos`)
+      const resPaquetes = await fetch(`${apiUrl}/api/paquetes/todos`, {
+        method: "GET",
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
+      })
       if (resPaquetes.ok) {
         const paquetes = await resPaquetes.json()
         setTodosPaquetes(Array.isArray(paquetes) ? paquetes : [])
       }
 
       // Cargar pagos pendientes (endpoint específico que ya filtra)
-      const resPagos = await fetch(`${apiUrl}/api/pagos/pendientes`)
+      const resPagos = await fetch(`${apiUrl}/api/pagos/pendientes`, {
+        method: "GET",
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
+      })
       if (resPagos.ok) {
         const text = await resPagos.text()
         if (text && text.trim() !== "") {
@@ -297,7 +310,7 @@ export function OperatorDashboard() {
 
       const response = await fetch(`${apiUrl}/api/pagos/${pagoId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ estado: "APROBADO" })
       })
 

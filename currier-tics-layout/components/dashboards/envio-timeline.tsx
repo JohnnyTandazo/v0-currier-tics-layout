@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 interface EnvioTimelineProps {
   envioId: string
@@ -58,9 +59,7 @@ export function EnvioTimeline({ envioId, onBack }: EnvioTimelineProps) {
         const url = `/api/envios/${encodeURIComponent(envioId)}`
         const response = await fetch(url, {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
         })
 
         if (!response.ok) {
@@ -134,9 +133,7 @@ export function EnvioTimeline({ envioId, onBack }: EnvioTimelineProps) {
       const url = `/api/envios/${encodeURIComponent(envioId)}/estado?nuevoEstado=${encodeURIComponent(nuevoEstado)}`
       const response = await fetch(url, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
       })
 
       if (!response.ok) {

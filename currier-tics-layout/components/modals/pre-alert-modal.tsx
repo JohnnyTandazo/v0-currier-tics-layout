@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { withAuthHeaders } from "@/lib/authHeaders"
 
 interface PreAlertModalProps {
   open: boolean
@@ -88,7 +89,7 @@ export function PreAlertModal({ open, onOpenChange }: PreAlertModalProps) {
       // POST to backend
       const response = await fetch(`${apiUrl}/api/paquetes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           trackingNumber: finalTrackingNumber,
           storeName: storeName === "otra" ? customStore : storeName,
