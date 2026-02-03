@@ -10,6 +10,7 @@ import { Package, Truck, Printer, FileText, Loader2, Eye } from "lucide-react"
 import { PDFDownloadLink } from "@react-pdf/renderer"
 import ShippingLabel from "@/components/pdf/shipping-label"
 import { PDFPreviewModal } from "@/components/pdf/pdf-preview-modal"
+import { securePdfDownload } from "@/lib/securePdfDownload"
 
 export default function MisDocumentos() {
   const [envios, setEnvios] = useState<any[]>([])
@@ -18,6 +19,25 @@ export default function MisDocumentos() {
   const [selectedEnvio, setSelectedEnvio] = useState<any>(null)
   const [usuarioEmail, setUsuarioEmail] = useState<string | null>(null)
   const [usuarioId, setUsuarioId] = useState<string | null>(null)
+  const [usuarioToken, setUsuarioToken] = useState<string | null>(null)
+
+  const handleDownloadGuia = async (envioId: number) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
+    await securePdfDownload({
+      url: `${apiUrl}/api/pdf/guia/${envioId}`,
+      nombreArchivo: `guia-${envioId}.pdf`,
+      token: usuarioToken || undefined,
+    })
+  }
+
+  const handleDownloadFactura = async (paqueteId: number) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
+    await securePdfDownload({
+      url: `${apiUrl}/api/pdf/factura/${paqueteId}`,
+      nombreArchivo: `factura-${paqueteId}.pdf`,
+      token: usuarioToken || undefined,
+    })
+  }
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -28,9 +48,11 @@ export default function MisDocumentos() {
           const usuarioObj = JSON.parse(user)
           const idLimpio = String(usuarioObj.id).split(':')[0].trim()
           const emailUsuario = usuarioObj?.email ? String(usuarioObj.email).trim() : null
+          const token = usuarioObj?.token ? String(usuarioObj.token).trim() : null
 
           setUsuarioEmail(emailUsuario)
           setUsuarioId(idLimpio)
+          setUsuarioToken(token)
           
           if (!idLimpio || isNaN(Number(idLimpio)) || Number(idLimpio) <= 0) {
             setEnvios([])
@@ -178,10 +200,7 @@ export default function MisDocumentos() {
                             <Button
                               size="sm"
                               variant="default"
-                              onClick={() => {
-                                const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
-                                window.open(`${apiUrl}/api/pdf/guia/${env.id}`, '_blank')
-                              }}
+                              onClick={() => handleDownloadGuia(env.id)}
                               title="Descargar PDF"
                               className="cursor-pointer"
                             >
@@ -238,10 +257,7 @@ export default function MisDocumentos() {
                           <Button 
                             size="sm" 
                             variant="default"
-                            onClick={() => {
-                              const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
-                              window.open(`${apiUrl}/api/pdf/factura/${pkg.id}`, '_blank')
-                            }}
+                            onClick={() => handleDownloadFactura(pkg.id)}
                             title="Descargar PDF"
                             className="cursor-pointer"
                           >

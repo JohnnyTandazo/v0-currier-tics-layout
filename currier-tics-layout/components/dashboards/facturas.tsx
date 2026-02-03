@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { PaymentModal } from "./payment-modal";
 import { safeFetch } from "@/lib/safeFetch";
+import { securePdfDownload } from "@/lib/securePdfDownload";
 import { formatearFecha, formatearFechaCorta, formatearFechaHora } from "@/lib/formatDate";
 
 interface Paquete {
@@ -129,6 +130,7 @@ export function Facturas() {
   const [paquetesFiltrados, setPaquetesFiltrados] = useState<Paquete[]>([]);
   const [loading, setLoading] = useState(true);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [usuarioToken, setUsuarioToken] = useState<string | null>(null);
   const [filtroActivo, setFiltroActivo] = useState<FiltroTab>("todas");
   const [facturaSeleccionada, setFacturaSeleccionada] = useState<Paquete | null>(null);
   const [isFacturaModalOpen, setIsFacturaModalOpen] = useState(false);
@@ -142,6 +144,9 @@ export function Facturas() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && parsed.id) {
+          setUsuario(parsed);
+          const token = parsed?.token ? String(parsed.token).trim() : null;
+          setUsuarioToken(token);
           setUsuario(parsed);
         } else {
           setLoading(false);
@@ -420,146 +425,19 @@ export function Facturas() {
     }, 300);
   };
 
-  // NUEVO: Descargar PDF individual (simulación con ventana)
-  const handleDescargarPDF = (paquete: Paquete) => {
-    const ventana = window.open("", "_blank", "width=800,height=600");
-    if (!ventana) {
-      alert("⚠️ Por favor, permite ventanas emergentes para descargar el PDF");
+  // NUEVO: Descargar PDF individual (con autenticación)
+  const handleDescargarPDF = async (paquete: Paquete) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      alert("❌ Error: URL del API no configurada");
       return;
     }
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Factura #${paquete.id.toString().padStart(6, "0")}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 40px;
-              max-width: 800px;
-              margin: 0 auto;
-            }
-            .header {
-              text-align: center;
-              border-bottom: 3px solid #2563eb;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
-            }
-            .header h1 {
-              color: #2563eb;
-              margin: 0;
-            }
-            .info-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 20px;
-              margin-bottom: 30px;
-            }
-            .info-box {
-              border: 1px solid #e5e7eb;
-              padding: 15px;
-              border-radius: 8px;
-              background: #f9fafb;
-            }
-            .info-box h3 {
-              margin: 0 0 10px 0;
-              color: #374151;
-              font-size: 14px;
-              text-transform: uppercase;
-            }
-            .info-box p {
-              margin: 5px 0;
-              color: #1f2937;
-            }
-            .total-box {
-              background: #dbeafe;
-              border: 2px solid #2563eb;
-              padding: 20px;
-              border-radius: 8px;
-              text-align: right;
-              margin-top: 30px;
-            }
-            .total-box .amount {
-              font-size: 36px;
-              color: #16a34a;
-              font-weight: bold;
-            }
-            .badge {
-              display: inline-block;
-              padding: 5px 15px;
-              border-radius: 20px;
-              background: #16a34a;
-              color: white;
-              font-size: 12px;
-              font-weight: bold;
-            }
-            .footer {
-              margin-top: 50px;
-              padding-top: 20px;
-              border-top: 2px solid #e5e7eb;
-              text-align: center;
-              color: #6b7280;
-              font-size: 12px;
-            }
-            @media print {
-              body { padding: 20px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>🏢 COURIER EXPRESS</h1>
-            <p style="margin: 5px 0;">Sistema de Gestión de Paquetes</p>
-            <p style="margin: 5px 0; font-size: 12px;">Email: info@courierexpress.com | Tel: +1 (305) 123-4567</p>
-            <h2 style="margin-top: 20px; color: #2563eb;">FACTURA #${paquete.id.toString().padStart(6, "0")}</h2>
-          </div>
-
-          <div class="info-grid">
-            <div class="info-box">
-              <h3>Facturado a:</h3>
-              <p><strong>${usuario?.nombre || "Cliente"}</strong></p>
-              <p>${usuario?.email || ""}</p>
-            </div>
-            <div class="info-box">
-              <h3>Fecha de Pago:</h3>
-              <p><strong>${formatearFecha(paquete.fechaPago || paquete.createdAt)}</strong></p>
-              <p>Estado: <span class="badge">✓ PAGADO</span></p>
-            </div>
-          </div>
-
-          <div class="info-box">
-            <h3>Detalles del Servicio:</h3>
-            <p><strong>Tracking:</strong> ${paquete.tracking || paquete.trackingNumber}</p>
-            <p><strong>Descripción:</strong> ${paquete.descripcion || "Servicio de envío internacional"}</p>
-            <p><strong>Peso:</strong> ${paquete.peso ? `${paquete.peso} lbs` : "N/A"}</p>
-            <p><strong>Fecha de Registro:</strong> ${formatearFecha(paquete.fechaCreacion || paquete.createdAt)}</p>
-          </div>
-
-          <div class="total-box">
-            <p style="margin: 0; color: #374151;">TOTAL PAGADO</p>
-            <div class="amount">$${paquete.precio?.toFixed(2) || "0.00"}</div>
-          </div>
-
-          <div class="footer">
-            <p>✓ Pago Verificado y Procesado</p>
-            <p>Gracias por usar nuestros servicios de envío internacional</p>
-            <p style="margin-top: 10px;">
-              Esta factura fue generada electrónicamente el ${formatearFecha(new Date().toISOString())}
-            </p>
-            <p><strong>Para consultas: soporte@courierexpress.com</strong></p>
-          </div>
-        </body>
-      </html>
-    `;
-
-    ventana.document.write(html);
-    ventana.document.close();
-    
-    // Esperar a que cargue y luego imprimir/descargar
-    setTimeout(() => {
-      ventana.print();
-    }, 500);
+    await securePdfDownload({
+      url: `${apiUrl}/api/pdf/factura/${paquete.id}`,
+      nombreArchivo: `factura-${paquete.id}.pdf`,
+      token: usuarioToken || undefined,
+    });
   };
 
   // Calcular totales
