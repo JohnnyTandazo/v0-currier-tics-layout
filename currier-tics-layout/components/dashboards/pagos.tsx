@@ -190,9 +190,14 @@ export function Pagos() {
                 const data = JSON.parse(text)
                 
                 if (Array.isArray(data)) {
-                  const facturasPendientes = data.filter(
-                    (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
-                  )
+                  const facturasPendientes = data.filter((f: FacturaPendiente) => {
+                    const estado = String(f.estado || "").toUpperCase()
+                    return (
+                      estado !== "PAGADO" &&
+                      estado !== "PENDIENTE_VERIFICACION" &&
+                      estado !== "EN_REVISION"
+                    )
+                  })
                   setFacturasPendientes(facturasPendientes)
                 } else {
                   setFacturasPendientes([])

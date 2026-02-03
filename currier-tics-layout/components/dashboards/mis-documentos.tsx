@@ -22,6 +22,18 @@ export default function MisDocumentos() {
   const [usuarioId, setUsuarioId] = useState<string | null>(null)
   const [usuarioToken, setUsuarioToken] = useState<string | null>(null)
 
+  const enviosNacionales = envios.filter((item: any) => {
+    const tipo = String(item?.tipoEnvio || item?.tipo_envio || "").toUpperCase()
+    const origen = String(item?.origen || "").toLowerCase()
+    return tipo === "NACIONAL" || origen === "local"
+  })
+
+  const importaciones = paquetes.filter((item: any) => {
+    const tipo = String(item?.tipoEnvio || item?.tipo_envio || "").toUpperCase()
+    const origen = String(item?.origen || "").toLowerCase()
+    return tipo === "INTERNACIONAL" || origen === "miami"
+  })
+
   const handleDownloadGuia = async (envioId: number) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
     await securePdfDownload({
@@ -188,7 +200,7 @@ export default function MisDocumentos() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {envios.map((env: any) => (
+                    {enviosNacionales.map((env: any) => (
                       <TableRow key={env.id}>
                         <TableCell className="font-bold font-mono">
                           {env.numeroTracking}
@@ -218,7 +230,7 @@ export default function MisDocumentos() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {envios.length === 0 && (
+                    {enviosNacionales.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
                           No hay envíos creados.
@@ -251,7 +263,7 @@ export default function MisDocumentos() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paquetes.map((pkg: any) => (
+                    {importaciones.map((pkg: any) => (
                       <TableRow key={pkg.id}>
                         <TableCell className="font-mono">
                           {pkg.trackingId || pkg.tracking || "—"}
@@ -273,7 +285,7 @@ export default function MisDocumentos() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {paquetes.length === 0 && (
+                    {importaciones.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
                           No hay importaciones registradas.

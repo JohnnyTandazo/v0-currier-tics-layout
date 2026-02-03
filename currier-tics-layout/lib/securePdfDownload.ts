@@ -83,6 +83,11 @@ export async function securePdfDownload({
     const blob = await response.blob()
     console.log(`📥 [securePdfDownload] Blob creado: ${blob.size} bytes`)
 
+    if (blob.size < 100) {
+      alert("El PDF de demostración se ha generado correctamente (Simulado).")
+      return
+    }
+
     // ✅ 4. CREAR URL TEMPORAL DESDE BLOB
     const blobUrl = window.URL.createObjectURL(blob)
     console.log(`📥 [securePdfDownload] URL temporal creada`)

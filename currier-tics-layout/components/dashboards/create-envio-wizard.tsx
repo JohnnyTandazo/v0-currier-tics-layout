@@ -184,7 +184,7 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
 
         const response = await fetch(url, {
           method: "GET",
-          headers: { "Content-Type": "application/json" },
+          headers: withAuthHeaders({ "Content-Type": "application/json" }),
         })
 
         if (!response.ok) {
@@ -192,14 +192,22 @@ export function CreateEnvioWizard({ onClose, onSuccess }: CreateEnvioWizardProps
         }
 
         const data = await response.json()
-        if (Array.isArray(data)) {
-          console.log("✅ Direcciones cargadas en Wizard:", data.length)
-          setDirecciones(data)
+        const direccionesData = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.content)
+            ? data.content
+            : []
+
+        if (direccionesData.length > 0) {
+          console.log("✅ Direcciones cargadas en Wizard:", direccionesData.length)
+          setDirecciones(direccionesData)
           // Auto-seleccionar la primera dirección principal o la primera disponible
-          const principal = data.find((d) => d.esPrincipal)
+          const principal = direccionesData.find((d: Direccion) => d.esPrincipal)
           if (principal) {
             reset({ direccionOrigenId: principal.id })
           }
+        } else {
+          setDirecciones([])
         }
       } catch (error) {
         console.error("🔥 Error al cargar direcciones:", error)
