@@ -50,6 +50,7 @@ interface FacturaPendiente {
   id: number
   numeroFactura: string | null
   monto: number
+  saldoPendiente?: number
   estado?: string
   descripcion?: string
   fechaVencimiento: string
@@ -338,6 +339,16 @@ export function Pagos() {
     .filter((p) => p.estado === "VERIFICADO")
     .reduce((acc, p) => acc + (p.monto || 0), 0)
 
+  const facturasDisponibles = facturasPendientes.filter((f) => {
+    const estado = f.estado ? f.estado.toUpperCase() : ""
+    return (
+      estado !== "PAGADO" &&
+      estado !== "PENDIENTE_VERIFICACION" &&
+      estado !== "APROBADO" &&
+      (f.saldoPendiente ?? f.monto ?? 0) > 0
+    )
+  })
+
   // Estado de carga
   if (loading) {
     return (
@@ -454,9 +465,9 @@ export function Pagos() {
                 <Label htmlFor="factura" className="text-foreground">
                   Seleccionar Factura
                 </Label>
-                {facturasPendientes.length === 0 ? (
-                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-400">
-                    📋 No tienes facturas pendientes. ¡Excelente!
+                {facturasDisponibles.length === 0 ? (
+                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-400">
+                    ¡Genial! No tienes pagos pendientes.
                   </div>
                 ) : (
                   <Select
@@ -464,7 +475,7 @@ export function Pagos() {
                     onValueChange={(v) => {
                       handleFormChange("facturaId", v)
                       // Auto-fill monto when factura is selected
-                      const selectedFactura = facturasPendientes.find(f => f.id.toString() === v)
+                      const selectedFactura = facturasDisponibles.find(f => f.id.toString() === v)
                       if (selectedFactura) {
                         setFormData(prev => ({ ...prev, monto: selectedFactura.monto.toString() }))
                       }
@@ -474,7 +485,7 @@ export function Pagos() {
                       <SelectValue placeholder="Selecciona una factura pendiente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {facturasPendientes.map((factura) => {
+                      {facturasDisponibles.map((factura) => {
                         // Build descriptive label for factura
                         let label = ""
                         if (factura.envio) {
@@ -622,7 +633,12 @@ export function Pagos() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={!formData.facturaId || !formData.monto || !formData.metodoPago}
+                disabled={
+                  facturasDisponibles.length === 0 ||
+                  !formData.facturaId ||
+                  !formData.monto ||
+                  !formData.metodoPago
+                }
               >
                 <Send className="mr-2 h-4 w-4" />
                 Registrar Pago
