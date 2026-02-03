@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { PaymentModal } from "./payment-modal";
 import { safeFetch } from "@/lib/safeFetch";
-import { securePdfDownload } from "@/lib/securePdfDownload";
+import { securePdfDownload, downloadPdfWithAuth } from "@/lib/securePdfDownload";
 import { formatearFecha, formatearFechaCorta, formatearFechaHora } from "@/lib/formatDate";
 
 interface Paquete {

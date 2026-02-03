@@ -10,7 +10,7 @@ import { Package, Truck, Printer, FileText, Loader2, Eye } from "lucide-react"
 import { PDFDownloadLink } from "@react-pdf/renderer"
 import ShippingLabel from "@/components/pdf/shipping-label"
 import { PDFPreviewModal } from "@/components/pdf/pdf-preview-modal"
-import { securePdfDownload } from "@/lib/securePdfDownload"
+import { securePdfDownload, downloadPdfWithAuth } from "@/lib/securePdfDownload"
 
 export default function MisDocumentos() {
   const [envios, setEnvios] = useState<any[]>([])
