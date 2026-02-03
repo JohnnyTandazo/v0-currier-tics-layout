@@ -7,8 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Package, Truck, Printer, FileText, Loader2, Eye } from "lucide-react"
-import { PDFDownloadLink } from "@react-pdf/renderer"
-import ShippingLabel from "@/components/pdf/shipping-label"
 import { PDFPreviewModal } from "@/components/pdf/pdf-preview-modal"
 import { securePdfDownload } from "@/lib/securePdfDownload"
 import { withAuthHeaders } from "@/lib/authHeaders"
@@ -21,18 +19,6 @@ export default function MisDocumentos() {
   const [usuarioEmail, setUsuarioEmail] = useState<string | null>(null)
   const [usuarioId, setUsuarioId] = useState<string | null>(null)
   const [usuarioToken, setUsuarioToken] = useState<string | null>(null)
-
-  // Lógica Robusta de Filtrado (Case Insensitive)
-  const esNacional = (item: any) => {
-    const tipo = item?.tipoEnvio ? String(item.tipoEnvio).toUpperCase() : ''
-    const origen = item?.origen ? String(item.origen).toUpperCase() : ''
-    return tipo === 'NACIONAL' || origen === 'LOCAL' || origen === 'QUITO' || origen === 'GUAYAQUIL'
-  }
-
-  // Combinar envíos y paquetes, luego filtrar
-  const todosLosDocumentos = [...envios, ...paquetes]
-  const enviosNacionales = todosLosDocumentos.filter(item => esNacional(item))
-  const importaciones = todosLosDocumentos.filter(item => !esNacional(item))
 
   const handleDownloadGuia = async (envioId: number) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
@@ -171,22 +157,81 @@ export default function MisDocumentos() {
         </p>
       </div>
 
-      <Tabs defaultValue="envios" className="w-full">
+      <Tabs defaultValue="recibidos" className="w-full">
         <TabsList>
-          <TabsTrigger value="envios">
-            <Truck className="mr-2 h-4 w-4" /> Envíos Nacionales
+          <TabsTrigger value="recibidos">
+            <Package className="mr-2 h-4 w-4" /> Documentos de Recibidos
           </TabsTrigger>
-          <TabsTrigger value="importaciones">
-            <Package className="mr-2 h-4 w-4" /> Importaciones
+          <TabsTrigger value="envios">
+            <Truck className="mr-2 h-4 w-4" /> Guías de Mis Envíos
           </TabsTrigger>
         </TabsList>
+
+        {/* TAB RECIBIDOS */}
+        <TabsContent value="recibidos">
+          <Card>
+            <CardHeader>
+              <CardTitle>Documentos de Recibidos</CardTitle>
+              <CardDescription>Facturas de los paquetes que recibes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tracking</TableHead>
+                      <TableHead>Tienda/Origen</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead className="text-right">Factura</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paquetes.map((pkg: any) => {
+                      const tracking = pkg.trackingNumber || pkg.numeroTracking || pkg.trackingId || pkg.tracking || "—"
+                      const origen = pkg.tienda || pkg.origen || pkg.descripcion || "—"
+                      const precio = pkg.monto || pkg.precioTotal || pkg.precio || "0.00"
+                      
+                      return (
+                        <TableRow key={pkg.id}>
+                          <TableCell className="font-mono">
+                            {tracking}
+                          </TableCell>
+                          <TableCell>{origen}</TableCell>
+                          <TableCell className="font-semibold">${precio}</TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              size="sm" 
+                              variant="default"
+                              onClick={() => handleDownloadFactura(pkg.id)}
+                              title="Descargar PDF"
+                              className="cursor-pointer"
+                            >
+                              <FileText className="mr-2 h-4 w-4" /> Ver Factura
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                    {paquetes.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
+                          No hay documentos de recibidos.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* TAB ENVIOS */}
         <TabsContent value="envios">
           <Card>
             <CardHeader>
-              <CardTitle>Mis Guías de Remisión</CardTitle>
-              <CardDescription>Descarga las guías de tus envíos nacionales</CardDescription>
+              <CardTitle>Guías de Mis Envíos</CardTitle>
+              <CardDescription>Descarga las guías de tus envíos</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -200,8 +245,7 @@ export default function MisDocumentos() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {enviosNacionales.map((env: any) => {
-                      // Detectar tracking independientemente del origen
+                    {envios.map((env: any) => {
                       const tracking = env.trackingNumber || env.numeroTracking || env.trackingId || "—"
                       const ciudad = env.destinatarioCiudad || env.ciudad || "Sin ciudad"
                       const nombre = env.destinatarioNombre || env.tienda || "Sin nombre"
@@ -238,72 +282,10 @@ export default function MisDocumentos() {
                         </TableRow>
                       )
                     })}
-                    {enviosNacionales.length === 0 && (
+                    {envios.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
                           No hay envíos creados.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* TAB IMPORTACIONES */}
-        <TabsContent value="importaciones">
-          <Card>
-            <CardHeader>
-              <CardTitle>Facturas de Importación</CardTitle>
-              <CardDescription>Historial de tus paquetes importados</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Tracking USA</TableHead>
-                      <TableHead>Tienda</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead className="text-right">Factura</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {importaciones.map((pkg: any) => {
-                      // Detectar si es envío o paquete
-                      const tracking = pkg.trackingNumber || pkg.numeroTracking || pkg.trackingId || pkg.tracking || "—"
-                      const descripcion = pkg.descripcion || pkg.tienda || "—"
-                      const precio = pkg.monto || pkg.precioTotal || pkg.precio || "0.00"
-                      
-                      return (
-                        <TableRow key={pkg.id}>
-                          <TableCell className="font-mono">
-                            {tracking}
-                          </TableCell>
-                          <TableCell>{descripcion}</TableCell>
-                          <TableCell className="font-semibold">
-                            ${precio}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              size="sm" 
-                              variant="default"
-                              onClick={() => handleDownloadFactura(pkg.id)}
-                              title="Descargar PDF"
-                              className="cursor-pointer"
-                            >
-                              <FileText className="mr-2 h-4 w-4" /> Ver Factura
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                    {importaciones.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
-                          No hay importaciones registradas.
                         </TableCell>
                       </TableRow>
                     )}
