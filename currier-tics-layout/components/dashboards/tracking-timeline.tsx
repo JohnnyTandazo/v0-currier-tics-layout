@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
   Package,
@@ -16,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { useToast } from "@/hooks/use-toast"
 
 interface TrackingTimelineProps {
   trackingId: string
@@ -36,11 +38,15 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
   const [packageData, setPackageData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isForbidden, setIsForbidden] = useState(false)
+  const { toast } = useToast()
+  const router = useRouter()
 
   useEffect(() => {
     const fetchPackage = async () => {
       setIsLoading(true)
       setError(null)
+      setIsForbidden(false)
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL
         if (!apiUrl) {
@@ -58,6 +64,19 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
         })
 
         if (!response.ok) {
+          if (response.status === 403) {
+            toast({
+              title: "Acceso denegado",
+              description: "⚠️ Acceso denegado. Este recurso no te pertenece.",
+              variant: "destructive",
+            })
+            setIsForbidden(true)
+            setPackageData(null)
+            setError("Acceso denegado. Este recurso no te pertenece.")
+            router.push("/dashboard")
+            return
+          }
+
           const errorData = await response.json().catch(() => ({}))
           throw new Error(
             errorData.message || `Error ${response.status}: ${response.statusText}`
@@ -177,6 +196,18 @@ export function TrackingTimeline({ trackingId, onBack }: TrackingTimelineProps) 
     return (
       <div className="flex items-center justify-center py-12">
         <p className="text-muted-foreground">Cargando datos del paquete...</p>
+      </div>
+    )
+  }
+
+  if (isForbidden) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <p className="text-destructive font-semibold">Acceso denegado. Este recurso no te pertenece.</p>
+        <Button onClick={() => router.push("/dashboard")} variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Volver al dashboard
+        </Button>
       </div>
     )
   }

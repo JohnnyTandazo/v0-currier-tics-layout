@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
   ClipboardList,
@@ -41,15 +42,18 @@ export function EnvioTimeline({ envioId, onBack }: EnvioTimelineProps) {
   const [envio, setEnvio] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isForbidden, setIsForbidden] = useState(false)
   const [userRole, setUserRole] = useState<string>("CLIENTE")
   const [currentEstado, setCurrentEstado] = useState<string>("PROCESANDO")
   const [isUpdatingEstado, setIsUpdatingEstado] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
 
   useEffect(() => {
     const fetchEnvio = async () => {
       setIsLoading(true)
       setError(null)
+      setIsForbidden(false)
       try {
         const url = `/api/envios/${encodeURIComponent(envioId)}`
         const response = await fetch(url, {
@@ -60,6 +64,19 @@ export function EnvioTimeline({ envioId, onBack }: EnvioTimelineProps) {
         })
 
         if (!response.ok) {
+          if (response.status === 403) {
+            toast({
+              title: "Acceso denegado",
+              description: "⚠️ Acceso denegado. Este recurso no te pertenece.",
+              variant: "destructive",
+            })
+            setIsForbidden(true)
+            setEnvio(null)
+            setError("Acceso denegado. Este recurso no te pertenece.")
+            router.push("/dashboard")
+            return
+          }
+
           const errorData = await response.json().catch(() => ({}))
           throw new Error(
             errorData.message || `Error ${response.status}: ${response.statusText}`
@@ -210,6 +227,18 @@ export function EnvioTimeline({ envioId, onBack }: EnvioTimelineProps) {
     return (
       <div className="flex items-center justify-center py-12">
         <p className="text-muted-foreground">Cargando datos del envío...</p>
+      </div>
+    )
+  }
+
+  if (isForbidden) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <p className="text-destructive font-semibold">Acceso denegado. Este recurso no te pertenece.</p>
+        <Button onClick={() => router.push("/dashboard")} variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Volver al dashboard
+        </Button>
       </div>
     )
   }

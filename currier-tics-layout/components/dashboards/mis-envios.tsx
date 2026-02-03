@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
   Search,
   Eye,
@@ -44,6 +45,7 @@ import { safeFetch } from "@/lib/safeFetch"
 import { defensiveFetch, createFallbackEnvio } from "@/lib/defensiveFetch"
 import { formatearFecha } from "@/lib/formatDate"
 import { CreateEnvioWizard } from "./create-envio-wizard"
+import { useToast } from "@/hooks/use-toast"
 
 interface Envio {
   id: number
@@ -82,6 +84,8 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
   const [usuario, setUsuario] = useState<any>(null)
   const [loadingDetalles, setLoadingDetalles] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const { toast } = useToast()
+  const router = useRouter()
 
   // ✅ FUNCIÓN DEFENSIVA PARA CARGAR DETALLES
   const handleVerDetalles = async (envioId: number | undefined) => {
@@ -111,6 +115,17 @@ export function MisEnvios({ onViewDetails }: MisEnviosProps) {
           fallbackData: createFallbackEnvio(envioId),
         }
       )
+
+      if (status === 403) {
+        toast({
+          title: "Acceso denegado",
+          description: "⚠️ Acceso denegado. Este recurso no te pertenece.",
+          variant: "destructive",
+        })
+        setLoadingDetalles(false)
+        router.push("/dashboard")
+        return
+      }
 
       if (error) {
         console.error("❌ [Frontend] Error al cargar detalles")
