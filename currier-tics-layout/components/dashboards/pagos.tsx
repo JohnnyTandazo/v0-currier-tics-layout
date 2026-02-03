@@ -192,11 +192,7 @@ export function Pagos() {
                 if (Array.isArray(data)) {
                   const facturasPendientes = data.filter((f: FacturaPendiente) => {
                     const estado = String(f.estado || "").toUpperCase()
-                    return (
-                      estado !== "PAGADO" &&
-                      estado !== "PENDIENTE_VERIFICACION" &&
-                      estado !== "EN_REVISION"
-                    )
+                    return estado !== "PAGADO" && estado !== "PENDIENTE_VERIFICACION"
                   })
                   setFacturasPendientes(facturasPendientes)
                 } else {
@@ -243,7 +239,6 @@ export function Pagos() {
       submitData.append("monto", formData.monto)
       submitData.append("metodoPago", formData.metodoPago)
       submitData.append("referencia", formData.referencia)
-      submitData.append("descripcion", formData.notas || "")
       if (formData.comprobante) {
         submitData.append("comprobante", formData.comprobante)
       }
@@ -281,9 +276,10 @@ export function Pagos() {
               try {
                 const data = JSON.parse(text)
                 if (Array.isArray(data)) {
-                  const facturasPendientes = data.filter(
-                    (f: FacturaPendiente) => f.estado === "PENDIENTE" || !f.estado
-                  )
+                  const facturasPendientes = data.filter((f: FacturaPendiente) => {
+                    const estado = String(f.estado || "").toUpperCase()
+                    return estado !== "PAGADO" && estado !== "PENDIENTE_VERIFICACION"
+                  })
                   setFacturasPendientes(facturasPendientes)
                 }
               } catch (err) {}

@@ -25,13 +25,13 @@ export default function MisDocumentos() {
   const enviosNacionales = envios.filter((item: any) => {
     const tipo = String(item?.tipoEnvio || item?.tipo_envio || "").toUpperCase()
     const origen = String(item?.origen || "").toLowerCase()
-    return tipo === "NACIONAL" || origen === "local"
+    return origen === "local" || tipo === "NACIONAL"
   })
 
   const importaciones = paquetes.filter((item: any) => {
     const tipo = String(item?.tipoEnvio || item?.tipo_envio || "").toUpperCase()
     const origen = String(item?.origen || "").toLowerCase()
-    return tipo === "INTERNACIONAL" || origen === "miami"
+    return origen !== "local" && tipo !== "NACIONAL"
   })
 
   const handleDownloadGuia = async (envioId: number) => {

@@ -84,7 +84,7 @@ export async function securePdfDownload({
     console.log(`📥 [securePdfDownload] Blob creado: ${blob.size} bytes`)
 
     if (blob.size < 100) {
-      alert("El PDF de demostración se ha generado correctamente (Simulado).")
+      alert("Documento de prueba generado exitosamente.")
       return
     }
 

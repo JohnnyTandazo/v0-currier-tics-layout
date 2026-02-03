@@ -88,20 +88,18 @@ export function PreAlertModal({ open, onOpenChange }: PreAlertModalProps) {
 
       const esNacional = String(tipoEnvio || "").toUpperCase() === "NACIONAL" || String(tipoEnvio || "").toUpperCase() === "LOCAL"
 
+      const payload = {
+        trackingNumber: finalTrackingNumber,
+        descripcion: description,
+        origen: esNacional ? "Local" : "Miami",
+        storeName: storeName === "otra" ? customStore : storeName,
+      }
+
       // POST to backend
       const response = await fetch(`${apiUrl}/api/paquetes`, {
         method: "POST",
         headers: withAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({
-          trackingNumber: finalTrackingNumber,
-          storeName: storeName === "otra" ? customStore : storeName,
-          descripcion: description,
-          precio: price,
-          usuarioId: Number(usuarioId),
-          tipo_envio: tipoEnvio, // Include tipo_envio
-          ...(esNacional ? { origen: "Local", tipoEnvio: "NACIONAL" } : {}),
-          estado: "PRE_ALERTA", // Default estado
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
