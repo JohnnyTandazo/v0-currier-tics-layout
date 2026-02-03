@@ -191,11 +191,17 @@ export function Pagos() {
                 const data = JSON.parse(text)
                 
                 if (Array.isArray(data)) {
-                  const facturasPendientes = data.filter((f: FacturaPendiente) => {
-                    const estado = String(f.estado || "").toUpperCase()
-                    return estado !== "PAGADO" && estado !== "PENDIENTE_VERIFICACION"
+                  // FILTRO "ANTI-ZOMBIE" - Excluir facturas ya procesadas
+                  const facturasReales = data.filter((f: FacturaPendiente) => {
+                    const estado = f.estado ? f.estado.toUpperCase() : ""
+                    return (
+                      estado !== "PAGADO" &&
+                      estado !== "PENDIENTE_VERIFICACION" &&
+                      estado !== "APROBADO" &&
+                      (f.saldoPendiente ?? f.monto ?? 0) > 0
+                    )
                   })
-                  setFacturasPendientes(facturasPendientes)
+                  setFacturasPendientes(facturasReales)
                 } else {
                   setFacturasPendientes([])
                 }
@@ -277,11 +283,17 @@ export function Pagos() {
               try {
                 const data = JSON.parse(text)
                 if (Array.isArray(data)) {
-                  const facturasPendientes = data.filter((f: FacturaPendiente) => {
-                    const estado = String(f.estado || "").toUpperCase()
-                    return estado !== "PAGADO" && estado !== "PENDIENTE_VERIFICACION"
+                  // FILTRO "ANTI-ZOMBIE" aplicado también en el refetch
+                  const facturasReales = data.filter((f: FacturaPendiente) => {
+                    const estado = f.estado ? f.estado.toUpperCase() : ""
+                    return (
+                      estado !== "PAGADO" &&
+                      estado !== "PENDIENTE_VERIFICACION" &&
+                      estado !== "APROBADO" &&
+                      (f.saldoPendiente ?? f.monto ?? 0) > 0
+                    )
                   })
-                  setFacturasPendientes(facturasPendientes)
+                  setFacturasPendientes(facturasReales)
                 }
               } catch (err) {}
             }
@@ -332,22 +344,15 @@ export function Pagos() {
     }
   }
 
-  // Calcular totales usando SOLO datos filtrados del usuario
+  // Calcular totales usando SOLO datos filtrados
   const totalPendiente = facturasPendientes.reduce((acc, f) => acc + (f.monto || 0), 0)
   const totalPagado = pagosRecientes.reduce((acc, p) => acc + (p.monto || 0), 0)
   const totalVerificado = pagosRecientes
     .filter((p) => p.estado === "VERIFICADO")
     .reduce((acc, p) => acc + (p.monto || 0), 0)
 
-  const facturasDisponibles = facturasPendientes.filter((f) => {
-    const estado = f.estado ? f.estado.toUpperCase() : ""
-    return (
-      estado !== "PAGADO" &&
-      estado !== "PENDIENTE_VERIFICACION" &&
-      estado !== "APROBADO" &&
-      (f.saldoPendiente ?? f.monto ?? 0) > 0
-    )
-  })
+  // Las facturas ya vienen filtradas desde el useEffect (sin PAGADO/APROBADO/PENDIENTE_VERIFICACION)
+  const facturasDisponibles = facturasPendientes
 
   // Estado de carga
   if (loading) {
