@@ -40,6 +40,14 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
 
+  // ✅ Función auxiliar para determinar si es nacional (CASE INSENSITIVE)
+  const isPaqueteNacional = (pkg: any): boolean => {
+    const tipo = pkg.tipoEnvio ? pkg.tipoEnvio.toUpperCase() : ''
+    const origen = pkg.origen ? pkg.origen.toUpperCase() : ''
+    
+    return tipo === 'NACIONAL' || origen === 'LOCAL'
+  }
+
   // Función para detectar si la descripción contiene palabras clave de envío nacional
   const contieneKeywordNacional = (descripcion: string): boolean => {
     // Keywords expandidas: ciudades + palabras clave de envío nacional + palabras de prueba
@@ -188,8 +196,9 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
     pkg.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const internacionales = filteredPaquetes.filter((p) => p.tipoDeducido === "INTERNACIONAL")
-  const nacionales = filteredPaquetes.filter((p) => p.tipoDeducido === "NACIONAL")
+  // ✅ Separar las listas usando la nueva lógica basada en campos del backend
+  const paquetesNacionales = filteredPaquetes.filter(p => isPaqueteNacional(p))
+  const paquetesInternacionales = filteredPaquetes.filter(p => !isPaqueteNacional(p))
 
   const getStatusColor = (estado: string) => {
     const estado_upper = estado.toUpperCase()
@@ -257,8 +266,8 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
       <Tabs defaultValue="todos" className="space-y-4">
         <TabsList className="grid w-full max-w-md grid-cols-3">
           <TabsTrigger value="todos">Todos ({filteredPaquetes.length})</TabsTrigger>
-          <TabsTrigger value="internacionales">Internacionales ({internacionales.length})</TabsTrigger>
-          <TabsTrigger value="nacionales">Nacionales ({nacionales.length})</TabsTrigger>
+          <TabsTrigger value="internacionales">Internacionales ({paquetesInternacionales.length})</TabsTrigger>
+          <TabsTrigger value="nacionales">Nacionales ({paquetesNacionales.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="todos">
@@ -290,7 +299,7 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
                         <TableCell className="font-mono text-sm">{pkg.trackingNumber}</TableCell>
                         <TableCell>{pkg.descripcion}</TableCell>
                         <TableCell>
-                          {pkg.tipoDeducido === "INTERNACIONAL" ? (
+                          {!isPaqueteNacional(pkg) ? (
                             <Badge className="bg-blue-600 text-white gap-1">
                               <Plane className="h-3 w-3" />
                               Internacional
@@ -334,7 +343,7 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
               <CardDescription>Importaciones desde el exterior</CardDescription>
             </CardHeader>
             <CardContent>
-              {internacionales.length === 0 ? (
+              {paquetesInternacionales.length === 0 ? (
                 <div className="text-center py-8">
                   <Package className="h-12 w-12 text-muted-foreground/30 mx-auto mb-2" />
                   <p className="text-muted-foreground">No tienes paquetes internacionales</p>
@@ -351,7 +360,7 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {internacionales.map((pkg) => (
+                    {paquetesInternacionales.map((pkg) => (
                       <TableRow key={pkg.id}>
                         <TableCell className="font-mono text-sm">{pkg.trackingNumber}</TableCell>
                         <TableCell>{pkg.descripcion}</TableCell>
@@ -387,7 +396,7 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
               <CardDescription>Envíos dentro del país</CardDescription>
             </CardHeader>
             <CardContent>
-              {nacionales.length === 0 ? (
+              {paquetesNacionales.length === 0 ? (
                 <div className="text-center py-8">
                   <Package className="h-12 w-12 text-muted-foreground/30 mx-auto mb-2" />
                   <p className="text-muted-foreground">No tienes paquetes nacionales</p>
@@ -404,7 +413,7 @@ export function MisPaquetes({ onViewTracking }: MisPaquetesProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {nacionales.map((pkg) => (
+                    {paquetesNacionales.map((pkg) => (
                       <TableRow key={pkg.id}>
                         <TableCell className="font-mono text-sm">{pkg.trackingNumber}</TableCell>
                         <TableCell>{pkg.descripcion}</TableCell>

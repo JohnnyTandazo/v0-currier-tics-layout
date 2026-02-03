@@ -22,17 +22,17 @@ export default function MisDocumentos() {
   const [usuarioId, setUsuarioId] = useState<string | null>(null)
   const [usuarioToken, setUsuarioToken] = useState<string | null>(null)
 
-  const enviosNacionales = envios.filter((item: any) => {
-    const tipo = String(item?.tipoEnvio || item?.tipo_envio || "").toUpperCase()
-    const origen = String(item?.origen || "").toLowerCase()
-    return origen === "local" || tipo === "NACIONAL"
-  })
+  // Lógica Robusta de Filtrado (Case Insensitive)
+  const esNacional = (item: any) => {
+    const tipo = item?.tipoEnvio ? String(item.tipoEnvio).toUpperCase() : ''
+    const origen = item?.origen ? String(item.origen).toUpperCase() : ''
+    return tipo === 'NACIONAL' || origen === 'LOCAL' || origen === 'QUITO' || origen === 'GUAYAQUIL'
+  }
 
-  const importaciones = paquetes.filter((item: any) => {
-    const tipo = String(item?.tipoEnvio || item?.tipo_envio || "").toUpperCase()
-    const origen = String(item?.origen || "").toLowerCase()
-    return origen !== "local" && tipo !== "NACIONAL"
-  })
+  // Combinar envíos y paquetes, luego filtrar
+  const todosLosDocumentos = [...envios, ...paquetes]
+  const enviosNacionales = todosLosDocumentos.filter(item => esNacional(item))
+  const importaciones = todosLosDocumentos.filter(item => !esNacional(item))
 
   const handleDownloadGuia = async (envioId: number) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
@@ -200,36 +200,44 @@ export default function MisDocumentos() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {enviosNacionales.map((env: any) => (
-                      <TableRow key={env.id}>
-                        <TableCell className="font-bold font-mono">
-                          {env.numeroTracking}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{env.destinatarioCiudad || env.ciudad || "Sin ciudad"}</p>
-                            <p className="text-xs text-muted-foreground">{env.destinatarioNombre || "Sin nombre"}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{env.estado}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {env.numeroTracking && (
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => handleDownloadGuia(env.id)}
-                              title="Descargar PDF"
-                              className="cursor-pointer"
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver Guía
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {enviosNacionales.map((env: any) => {
+                      // Detectar tracking independientemente del origen
+                      const tracking = env.trackingNumber || env.numeroTracking || env.trackingId || "—"
+                      const ciudad = env.destinatarioCiudad || env.ciudad || "Sin ciudad"
+                      const nombre = env.destinatarioNombre || env.tienda || "Sin nombre"
+                      const estado = env.estado || "PENDIENTE"
+                      
+                      return (
+                        <TableRow key={env.id}>
+                          <TableCell className="font-bold font-mono">
+                            {tracking}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{ciudad}</p>
+                              <p className="text-xs text-muted-foreground">{nombre}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{estado}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {tracking !== "—" && (
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => handleDownloadGuia(env.id)}
+                                title="Descargar PDF"
+                                className="cursor-pointer"
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Ver Guía
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                     {enviosNacionales.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
@@ -263,28 +271,35 @@ export default function MisDocumentos() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {importaciones.map((pkg: any) => (
-                      <TableRow key={pkg.id}>
-                        <TableCell className="font-mono">
-                          {pkg.trackingId || pkg.tracking || "—"}
-                        </TableCell>
-                        <TableCell>{pkg.tienda || pkg.descripcion || "—"}</TableCell>
-                        <TableCell className="font-semibold">
-                          ${pkg.precioTotal || pkg.precio || "0.00"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            size="sm" 
-                            variant="default"
-                            onClick={() => handleDownloadFactura(pkg.id)}
-                            title="Descargar PDF"
-                            className="cursor-pointer"
-                          >
-                            <FileText className="mr-2 h-4 w-4" /> Ver Factura
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {importaciones.map((pkg: any) => {
+                      // Detectar si es envío o paquete
+                      const tracking = pkg.trackingNumber || pkg.numeroTracking || pkg.trackingId || pkg.tracking || "—"
+                      const descripcion = pkg.descripcion || pkg.tienda || "—"
+                      const precio = pkg.monto || pkg.precioTotal || pkg.precio || "0.00"
+                      
+                      return (
+                        <TableRow key={pkg.id}>
+                          <TableCell className="font-mono">
+                            {tracking}
+                          </TableCell>
+                          <TableCell>{descripcion}</TableCell>
+                          <TableCell className="font-semibold">
+                            ${precio}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              size="sm" 
+                              variant="default"
+                              onClick={() => handleDownloadFactura(pkg.id)}
+                              title="Descargar PDF"
+                              className="cursor-pointer"
+                            >
+                              <FileText className="mr-2 h-4 w-4" /> Ver Factura
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                     {importaciones.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center p-8 text-muted-foreground">
