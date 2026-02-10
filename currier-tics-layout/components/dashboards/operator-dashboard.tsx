@@ -217,7 +217,7 @@ export default function OperatorDashboard({ user }: { user?: any }) {
       const response = await fetch(`${apiUrl}/api/pagos/${pagoId}`, {
         method: "PUT",
         headers: withAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ estado: "APROBADO" })
+        body: JSON.stringify({ estado: "VERIFICADO" })
       })
 
       if (response.ok) {
