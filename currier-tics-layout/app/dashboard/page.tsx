@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 // Asegúrate de que estas rutas sean correctas
 import OperatorDashboard from "@/components/dashboards/operator-dashboard";
-import { AdminDashboard } from "@/components/dashboards/AdminDashboard"; 
+import AdminDashboard from "@/components/dashboards/AdminDashboard"; 
 import ClientDashboard from "@/components/dashboards/client-dashboard";
 // Si creaste el archivo en "components", ajusta esta ruta:
 
