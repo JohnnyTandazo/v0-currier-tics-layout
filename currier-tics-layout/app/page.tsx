@@ -1,0 +1,164 @@
+"use client"
+
+import { useState, useEffect, lazy, Suspense } from "react"
+import { LandingPage } from "@/components/landing-page"
+import { Skeleton } from "@/components/ui/skeleton"
+import OperatorDashboard from "@/components/dashboards/operator-dashboard"
+
+export type UserRole = "client" | "operator" | "tracking"
+export type ClientView = "dashboard" | "envios" | "facturas" | "paquetes" | "pagos" | "notificaciones" | "configuracion"
+
+// Dynamically import the entire DashboardLayout component
+// This ensures SidebarProvider and all sidebar hooks are only loaded when needed
+const DashboardLayout = lazy(() => import("@/components/ui/dashboard-layout"))
+
+function DashboardSkeleton() {
+  return (
+    <div className="flex h-screen w-full bg-background">
+      <div className="w-64 border-r border-border bg-card p-4">
+        <Skeleton className="h-10 w-full mb-6" />
+        <Skeleton className="h-8 w-full mb-2" />
+        <Skeleton className="h-8 w-full mb-2" />
+        <Skeleton className="h-8 w-full mb-2" />
+        <Skeleton className="h-8 w-full mb-2" />
+      </div>
+      <div className="flex-1 flex flex-col">
+        <div className="h-16 border-b border-border bg-card px-4 flex items-center">
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="flex-1 p-6">
+          <Skeleton className="h-8 w-48 mb-6" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+    const handleLogin = () => {
+      setIsLoggedIn(true)
+    }
+
+  const [currentRole, setCurrentRole] = useState<UserRole>("client")
+  const [currentClientView, setCurrentClientView] = useState<ClientView>("dashboard")
+  const [selectedTrackingId, setSelectedTrackingId] = useState<string | null>(null)
+  const [trackingMode, setTrackingMode] = useState<"paquetes" | "envios">("paquetes")
+  const [user, setUser] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Validar y loguear la URL del backend
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL
+    if (apiUrl) {
+      console.log("✅ Conectando a Backend:", apiUrl)
+    } else {
+      console.warn("⚠️ NEXT_PUBLIC_API_URL no está configurada")
+    }
+  }, [])
+
+  // Check localStorage on mount y refuerza seguridad de rol
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedUser = localStorage.getItem("usuario")
+      if (savedUser) {
+        try {
+          const parsedUser = JSON.parse(savedUser)
+          setUser(parsedUser)
+          setIsLoggedIn(true)
+          // Seguridad: fuerza el rol operator si corresponde
+          if (parsedUser.rol === "OPERADOR") {
+            setCurrentRole("operator")
+          } else {
+            setCurrentRole("client")
+          }
+        } catch (error) {
+          console.error("Error parsing user from localStorage:", error)
+          localStorage.removeItem("usuario")
+        }
+      }
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Bloqueo: si un cliente intenta activar manualmente el modo operador, lo regresa a client
+  useEffect(() => {
+    if (user && user.rol !== "OPERADOR" && currentRole === "operator") {
+      setCurrentRole("client")
+    }
+  }, [user, currentRole])
+
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    setCurrentRole("client")
+    setCurrentClientView("dashboard")
+    setUser(null)
+    localStorage.removeItem("usuario")
+    localStorage.removeItem("token")
+  }
+
+  const handleViewTracking = (trackingId: string) => {
+    setTrackingMode("paquetes");
+    setSelectedTrackingId(trackingId);
+    setCurrentRole("tracking"); // Cambia automáticamente a vista de seguimiento
+  }
+
+  const handleViewEnvioDetails = (envioId: string) => {
+    setTrackingMode("envios")
+    setSelectedTrackingId(envioId)
+    setCurrentRole("tracking")
+  }
+
+  const handleBackFromTracking = () => {
+    setCurrentRole("client");
+    setCurrentClientView("dashboard"); // Regresa automáticamente a dashboard
+    setSelectedTrackingId(null);
+  }
+
+  const handleClientViewChange = (view: ClientView) => {
+    setCurrentClientView(view)
+    if (currentRole !== "client") {
+      setCurrentRole("client")
+    }
+  }
+
+  // Show loading skeleton while checking auth state
+  if (isLoading) {
+    return <DashboardSkeleton />
+  }
+
+  // Show Landing Page if not logged in
+  if (!isLoggedIn) {
+    return <LandingPage onLogin={handleLogin} />
+  }
+
+  // Seguridad: si el usuario es operador, renderiza solo OperatorDashboard
+  if (user && user.rol === "OPERADOR") {
+    return <OperatorDashboard user={user} />
+  }
+
+  // Show Dashboard if logged in - wrapped in Suspense for lazy loading
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardLayout
+        user={user}
+        currentRole={currentRole}
+        currentClientView={currentClientView}
+        onRoleChange={setCurrentRole}
+        onClientViewChange={handleClientViewChange}
+        onLogout={handleLogout}
+        onViewTracking={handleViewTracking}
+        onViewEnvioDetails={handleViewEnvioDetails}
+        onBackFromTracking={handleBackFromTracking}
+        selectedTrackingId={selectedTrackingId}
+        trackingMode={trackingMode}
+      />
+    </Suspense>
+  )
+}

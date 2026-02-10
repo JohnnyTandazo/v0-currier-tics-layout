@@ -1,0 +1,14 @@
+# Dependencias
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Variables de entorno
+.env
+.env.local
