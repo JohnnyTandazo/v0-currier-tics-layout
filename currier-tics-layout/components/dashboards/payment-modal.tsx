@@ -167,10 +167,63 @@ export function PaymentModal({
             Ingresa los datos de tu tarjeta para completar el pago
           </DialogDescription>
         </DialogHeader>
+        <div>
+          {/* Selector de método de pago */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Método de Pago</label>
+            <select
+              className="w-full border rounded px-3 py-2"
+              // value={metodoPago} // Debes enlazar esto a tu estado real
+              // onChange={e => setMetodoPago(e.target.value)}
+              required
+            >
+              <option value="">Selecciona un método</option>
+              <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+              <option value="CHEQUE">Cheque o Depósito Bancario</option>
+            </select>
+          </div>
 
-        <div className="space-y-6 py-4">
+          {/* Sección de cuentas bancarias */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Banco Pichincha */}
+              <div>
+                <div className="font-bold flex items-center gap-1 mb-2">
+                  <span role="img" aria-label="banco">🏦</span> Banco Pichincha
+                </div>
+                <div className="text-sm">
+                  <div><span className="font-semibold">Cta. Corriente:</span> 1234567890</div>
+                  <div><span className="font-semibold">Cta. Ahorros:</span> 0987654321</div>
+                  <div><span className="font-semibold">Titular:</span> Currier TICS</div>
+                </div>
+              </div>
+              {/* Banco Guayaquil */}
+              <div>
+                <div className="font-bold flex items-center gap-1 mb-2">
+                  <span role="img" aria-label="banco">🏦</span> Banco Guayaquil
+                </div>
+                <div className="text-sm">
+                  <div><span className="font-semibold">Cta. Corriente:</span> 1122334455</div>
+                  <div><span className="font-semibold">Cta. Ahorros:</span> 5544332211</div>
+                  <div><span className="font-semibold">Titular:</span> Currier TICS</div>
+                </div>
+              </div>
+              {/* Banco del Austro */}
+              <div>
+                <div className="font-bold flex items-center gap-1 mb-2">
+                  <span role="img" aria-label="banco">🏦</span> Banco del Austro
+                </div>
+                <div className="text-sm">
+                  <div><span className="font-semibold">Cta. Corriente:</span> 9988776655</div>
+                  <div><span className="font-semibold">Cta. Ahorros:</span> 5566778899</div>
+                  <div><span className="font-semibold">Titular:</span> Currier TICS</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Información del monto */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Monto a pagar</p>
@@ -182,138 +235,36 @@ export function PaymentModal({
             </div>
           </div>
 
-          {/* Formulario de tarjeta */}
-          <div className="space-y-4">
-            {/* Titular */}
-            <div className="space-y-2">
-              <Label htmlFor="titular">Titular de la Tarjeta</Label>
-              <Input
-                id="titular"
-                placeholder="NOMBRE APELLIDO"
-                value={formData.titular}
-                onChange={(e) =>
-                  handleChange("titular", e.target.value.toUpperCase())
-                }
-                className={errors.titular ? "border-red-500" : ""}
-              />
-              {errors.titular && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.titular}
-                </p>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handlePagar}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Pagar ${monto.toFixed(2)}
+                </>
               )}
-            </div>
-
-            {/* Número de tarjeta */}
-            <div className="space-y-2">
-              <Label htmlFor="numeroTarjeta">Número de Tarjeta</Label>
-              <div className="relative">
-                <Input
-                  id="numeroTarjeta"
-                  placeholder="1234 5678 9012 3456"
-                  value={formData.numeroTarjeta}
-                  onChange={(e) => handleChange("numeroTarjeta", e.target.value)}
-                  className={`pr-20 ${errors.numeroTarjeta ? "border-red-500" : ""}`}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  <CreditCard className="h-5 w-5 text-gray-400" />
-                  {formData.numeroTarjeta && (
-                    <span className="text-xs text-gray-500 font-medium">
-                      {getCardType()}
-                    </span>
-                  )}
-                </div>
-              </div>
-              {errors.numeroTarjeta && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.numeroTarjeta}
-                </p>
-              )}
-            </div>
-
-            {/* Expiración y CVC */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="expiracion">Expiración</Label>
-                <Input
-                  id="expiracion"
-                  placeholder="MM/YY"
-                  value={formData.expiracion}
-                  onChange={(e) => handleChange("expiracion", e.target.value)}
-                  className={errors.expiracion ? "border-red-500" : ""}
-                />
-                {errors.expiracion && (
-                  <p className="text-xs text-red-500 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {errors.expiracion}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cvc">CVC</Label>
-                <div className="relative">
-                  <Input
-                    id="cvc"
-                    placeholder="123"
-                    value={formData.cvc}
-                    onChange={(e) => handleChange("cvc", e.target.value)}
-                    className={errors.cvc ? "border-red-500" : ""}
-                    type="password"
-                    maxLength={4}
-                  />
-                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-                {errors.cvc && (
-                  <p className="text-xs text-red-500 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {errors.cvc}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Mensaje de seguridad */}
-          <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-            <Lock className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-            <p>
-              Tu información está protegida con encriptación SSL. Esta es una
-              transacción segura simulada para propósitos de demostración.
-            </p>
-          </div>
+            </Button>
+          </DialogFooter>
         </div>
-
-        <DialogFooter className="gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="button"
-            onClick={handlePagar}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Procesando...
-              </>
-            ) : (
-              <>
-                <Lock className="h-4 w-4 mr-2" />
-                Pagar ${monto.toFixed(2)}
-              </>
-            )}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
