@@ -1,12 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Bell, Package, Truck, Check, AlertCircle, DollarSign, Clock, Eye, Trash2 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Bell, Truck, Check, AlertCircle, Eye, Trash2 } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-
+import { withAuthHeaders } from "@/lib/authHeaders" // Importante: Asegúrate de tener este archivo
 
 // Interfaces para datos de facturas y pagos
 interface FacturaData {
@@ -39,46 +38,31 @@ interface Usuario {
 
 const getTypeColor = (type: string) => {
   switch (type) {
-    case "success":
-      return "bg-green-500/20 border-green-500/30"
-    case "warning":
-      return "bg-yellow-500/20 border-yellow-500/30"
-    case "error":
-      return "bg-red-500/20 border-red-500/30"
-    case "info":
-      return "bg-blue-500/20 border-blue-500/30"
-    default:
-      return "bg-gray-500/20 border-gray-500/30"
+    case "success": return "bg-green-500/20 border-green-500/30"
+    case "warning": return "bg-yellow-500/20 border-yellow-500/30"
+    case "error": return "bg-red-500/20 border-red-500/30"
+    case "info": return "bg-blue-500/20 border-blue-500/30"
+    default: return "bg-gray-500/20 border-gray-500/30"
   }
 }
 
 const getTypeBadgeColor = (type: string) => {
   switch (type) {
-    case "success":
-      return "bg-green-500/20 text-green-700"
-    case "warning":
-      return "bg-yellow-500/20 text-yellow-700"
-    case "error":
-      return "bg-red-500/20 text-red-700"
-    case "info":
-      return "bg-blue-500/20 text-blue-700"
-    default:
-      return "bg-gray-500/20 text-gray-700"
+    case "success": return "bg-green-500/20 text-green-700"
+    case "warning": return "bg-yellow-500/20 text-yellow-700"
+    case "error": return "bg-red-500/20 text-red-700"
+    case "info": return "bg-blue-500/20 text-blue-700"
+    default: return "bg-gray-500/20 text-gray-700"
   }
 }
 
 const getIcon = (type: string) => {
   switch (type) {
-    case "success":
-      return <Check className="h-5 w-5 text-green-500" />
-    case "warning":
-      return <AlertCircle className="h-5 w-5 text-yellow-500" />
-    case "error":
-      return <AlertCircle className="h-5 w-5 text-red-500" />
-    case "info":
-      return <Truck className="h-5 w-5 text-blue-500" />
-    default:
-      return <Bell className="h-5 w-5 text-gray-500" />
+    case "success": return <Check className="h-5 w-5 text-green-500" />
+    case "warning": return <AlertCircle className="h-5 w-5 text-yellow-500" />
+    case "error": return <AlertCircle className="h-5 w-5 text-red-500" />
+    case "info": return <Truck className="h-5 w-5 text-blue-500" />
+    default: return <Bell className="h-5 w-5 text-gray-500" />
   }
 }
 
@@ -93,11 +77,7 @@ export function Notificaciones() {
       const stored = localStorage.getItem("usuario")
       if (stored) {
         const parsed = JSON.parse(stored)
-        if (parsed && parsed.id) {
-          setUsuario(parsed)
-        } else {
-          setLoading(false)
-        }
+        setUsuario(parsed)
       } else {
         setLoading(false)
       }
@@ -106,124 +86,131 @@ export function Notificaciones() {
     }
   }, [])
 
-
   // Lógica sintética de notificaciones basada en facturas y pagos
   useEffect(() => {
     const cargarNotificaciones = async () => {
-      if (!usuario) {
-        setLoading(false);
-        return;
+      // 1. Validar usuario e ID limpio
+      if (!usuario || !usuario.id) {
+        setLoading(false)
+        return
       }
+      
+      // LIMPIEZA CLAVE: Quitamos basura del ID (ej: "16:email...")
+      const idLimpio = String(usuario.id).split(":")[0].trim()
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
 
       try {
-        // Importar defensiveFetch dinámicamente para evitar problemas SSR
-        const { defensiveFetch } = await import("@/lib/defensiveFetch");
+        // 2. Fetch en paralelo usando withAuthHeaders (que sabemos que funciona)
+        const [facturasRes, pagosRes] = await Promise.all([
+          fetch(`${apiUrl}/api/facturas/usuario/${idLimpio}`, { 
+            headers: withAuthHeaders({ "Content-Type": "application/json" }) 
+          }),
+          fetch(`${apiUrl}/api/pagos`, { 
+            headers: withAuthHeaders({ "Content-Type": "application/json" }) 
+          })
+        ])
 
-        // 1. Obtener facturas del usuario
-        const facturasRes = await defensiveFetch<FacturaData[]>(`/api/facturas/usuario/${usuario.id}`);
-        const facturas = Array.isArray(facturasRes.data) ? facturasRes.data : [];
+        let tempNotificaciones: Notificacion[] = []
+        let notifId = 1
 
-        // 2. Obtener pagos del usuario
-        const pagosRes = await defensiveFetch<PagoData[]>(`/api/pagos`);
-        const pagos = Array.isArray(pagosRes.data) ? pagosRes.data : [];
-
-        // 3. Generar notificaciones sintéticas
-        let tempNotificaciones: Notificacion[] = [];
-        let notifId = 1;
-
-        // Facturas pendientes
-        facturas.forEach((factura) => {
-          if (["PENDIENTE", "POR_PAGAR"].includes(factura.estado?.toUpperCase())) {
-            tempNotificaciones.push({
-              id: notifId++,
-              title: "Factura Pendiente",
-              message: `Tienes una factura de $${factura.monto} sin pagar.`,
-              type: "warning",
-              timestamp: new Date().toLocaleString(),
-              read: false,
-              usuarioId: usuario.id,
-            });
+        // 3. Procesar Facturas
+        if (facturasRes.ok) {
+          const facturas: FacturaData[] = await facturasRes.json()
+          if (Array.isArray(facturas)) {
+             facturas.forEach((factura) => {
+              if (["PENDIENTE", "POR_PAGAR"].includes(factura.estado?.toUpperCase())) {
+                tempNotificaciones.push({
+                  id: notifId++,
+                  title: "Factura Pendiente",
+                  message: `Tienes una factura de $${factura.monto.toFixed(2)} sin pagar.`,
+                  type: "warning",
+                  timestamp: "Acción requerida",
+                  read: false,
+                  usuarioId: usuario.id,
+                })
+              }
+            })
           }
-        });
+        }
 
-        // Pagos
-        pagos.forEach((pago) => {
-          const estado = pago.estado?.toUpperCase();
-          if (["VERIFICADO", "APROBADO"].includes(estado)) {
-            tempNotificaciones.push({
-              id: notifId++,
-              title: "Pago Aprobado",
-              message: `Tu pago de $${pago.monto} ha sido validado.`,
-              type: "success",
-              timestamp: pago.fecha || new Date().toLocaleString(),
-              read: false,
-              usuarioId: usuario.id,
-            });
-          } else if (estado === "RECHAZADO") {
-            tempNotificaciones.push({
-              id: notifId++,
-              title: "Pago Rechazado",
-              message: `Tu pago de $${pago.monto} fue rechazado.`,
-              type: "error",
-              timestamp: pago.fecha || new Date().toLocaleString(),
-              read: false,
-              usuarioId: usuario.id,
-            });
-          } else if (estado === "PENDIENTE") {
-            tempNotificaciones.push({
-              id: notifId++,
-              title: "Pago Pendiente",
-              message: `Verificando pago de $${pago.monto}...`,
-              type: "info",
-              timestamp: pago.fecha || new Date().toLocaleString(),
-              read: false,
-              usuarioId: usuario.id,
-            });
+        // 4. Procesar Pagos
+        if (pagosRes.ok) {
+          const pagos: PagoData[] = await pagosRes.json()
+          if (Array.isArray(pagos)) {
+             // Tomar solo los últimos 5 para no llenar la pantalla
+             pagos.slice(0, 5).forEach((pago) => {
+              const estado = pago.estado?.toUpperCase()
+              if (["VERIFICADO", "APROBADO"].includes(estado)) {
+                tempNotificaciones.push({
+                  id: notifId++,
+                  title: "Pago Aprobado",
+                  message: `Tu pago de $${pago.monto.toFixed(2)} ha sido validado.`,
+                  type: "success",
+                  timestamp: pago.fecha ? new Date(pago.fecha).toLocaleDateString() : "Reciente",
+                  read: true, // Si está aprobado, sale como leído (opcional)
+                  usuarioId: usuario.id,
+                })
+              } else if (estado === "RECHAZADO") {
+                tempNotificaciones.push({
+                  id: notifId++,
+                  title: "Pago Rechazado",
+                  message: `Tu pago de $${pago.monto.toFixed(2)} fue rechazado.`,
+                  type: "error",
+                  timestamp: pago.fecha ? new Date(pago.fecha).toLocaleDateString() : "Reciente",
+                  read: false,
+                  usuarioId: usuario.id,
+                })
+              } else if (estado === "PENDIENTE") {
+                tempNotificaciones.push({
+                  id: notifId++,
+                  title: "Pago en Revisión",
+                  message: `Verificando pago de $${pago.monto.toFixed(2)}...`,
+                  type: "info",
+                  timestamp: pago.fecha ? new Date(pago.fecha).toLocaleDateString() : "Reciente",
+                  read: false,
+                  usuarioId: usuario.id,
+                })
+              }
+            })
           }
-        });
+        }
 
-        // Ordenar: warning (deudas) primero
+        // 5. Ordenar: warning (deudas) primero
         tempNotificaciones.sort((a, b) => {
-          if (a.type === "warning" && b.type !== "warning") return -1;
-          if (a.type !== "warning" && b.type === "warning") return 1;
-          return 0;
-        });
+          if (a.type === "warning" && b.type !== "warning") return -1
+          if (a.type !== "warning" && b.type === "warning") return 1
+          return 0
+        })
 
-        setNotificaciones(tempNotificaciones);
+        setNotificaciones(tempNotificaciones)
+
       } catch (err) {
-        setNotificaciones([]);
+        console.error("Error cargando notificaciones", err)
+        setNotificaciones([])
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    cargarNotificaciones();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usuario]);
+    cargarNotificaciones()
+  }, [usuario])
 
-  // Marcar como leída
+  // Handlers visuales (no afectan BD)
   const handleMarcarLeida = (id: number) => {
-    console.log("Marcando como leída:", id)
-    setNotificaciones((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    )
+    setNotificaciones((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
   }
 
-  // Marcar todas como leídas
   const handleMarcarTodasLeidas = () => {
-    console.log("Marcando todas como leídas")
     setNotificaciones((prev) => prev.map((n) => ({ ...n, read: true })))
   }
 
-  // Eliminar notificación
   const handleEliminar = (id: number) => {
-    console.log("Eliminando notificación:", id)
     setNotificaciones((prev) => prev.filter((n) => n.id !== id))
   }
 
   const unreadCount = notificaciones.filter((n) => !n.read).length
 
-  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -235,7 +222,6 @@ export function Notificaciones() {
     )
   }
 
-  // Sin sesión
   if (!usuario) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -243,18 +229,7 @@ export function Notificaciones() {
           <CardContent className="pt-6">
             <div className="text-center">
               <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                Sesión requerida
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Inicia sesión para ver tus notificaciones.
-              </p>
-              <a
-                href="/login"
-                className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Iniciar Sesión
-              </a>
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">Sesión requerida</h2>
             </div>
           </CardContent>
         </Card>
@@ -287,9 +262,7 @@ export function Notificaciones() {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Bell className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-semibold text-muted-foreground">
-              Sin notificaciones
-            </h3>
+            <h3 className="text-lg font-semibold text-muted-foreground">Sin notificaciones</h3>
             <p className="text-sm text-muted-foreground text-center mt-2">
               No tienes notificaciones nuevas en este momento
             </p>
@@ -306,55 +279,42 @@ export function Notificaciones() {
             >
               <CardContent className="pt-6">
                 <div className="flex gap-4">
-                  {/* Icon */}
                   <div className="flex-shrink-0 mt-1">{getIcon(notif.type)}</div>
-
-                  {/* Content */}
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-sm md:text-base">
-                            {notif.title}
-                          </h3>
+                          <h3 className="font-semibold text-sm md:text-base">{notif.title}</h3>
                           {!notif.read && (
                             <span className="inline-block h-2 w-2 rounded-full bg-primary" />
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {notif.message}
-                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">{notif.message}</p>
                       </div>
                       <Badge variant="secondary" className={getTypeBadgeColor(notif.type)}>
                         {notif.type}
                       </Badge>
                     </div>
-
-                    {/* Footer */}
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
-                      <span className="text-xs text-muted-foreground">
-                        {notif.timestamp}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{notif.timestamp}</span>
                       <div className="flex gap-2">
                         {!notif.read && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="h-8 text-xs"
                             onClick={() => handleMarcarLeida(notif.id)}
                           >
-                            <Eye className="h-3 w-3 mr-1" />
-                            Marcar como leída
+                            <Eye className="h-3 w-3 mr-1" /> Marcar como leída
                           </Button>
                         )}
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="h-8 text-xs text-red-500 hover:text-red-600"
                           onClick={() => handleEliminar(notif.id)}
                         >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Descartar
+                          <Trash2 className="h-3 w-3 mr-1" /> Descartar
                         </Button>
                       </div>
                     </div>
