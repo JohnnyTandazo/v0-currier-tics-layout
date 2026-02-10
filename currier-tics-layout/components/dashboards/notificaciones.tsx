@@ -7,6 +7,20 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 
+
+// Interfaces para datos de facturas y pagos
+interface FacturaData {
+  id: number;
+  monto: number;
+  estado: string;
+}
+interface PagoData {
+  id: number;
+  monto: number;
+  estado: string;
+  fecha: string;
+}
+
 interface Notificacion {
   id: number
   title: string
@@ -92,14 +106,100 @@ export function Notificaciones() {
     }
   }, [])
 
-  // Fetch notificaciones SOLO si hay usuario
+
+  // Lógica sintética de notificaciones basada en facturas y pagos
   useEffect(() => {
-    // ⚠️ Si el endpoint /api/notificaciones no existe, devolver vacío
-    // para evitar errores 404 en la consola
-    console.log("⚠️ [NOTIF] Endpoint /api/notificaciones no disponible en backend")
-    setNotificaciones([])
-    setLoading(false)
-  }, [])
+    const cargarNotificaciones = async () => {
+      if (!usuario) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Importar defensiveFetch dinámicamente para evitar problemas SSR
+        const { defensiveFetch } = await import("@/lib/defensiveFetch");
+
+        // 1. Obtener facturas del usuario
+        const facturasRes = await defensiveFetch<FacturaData[]>(`/api/facturas/usuario/${usuario.id}`);
+        const facturas = Array.isArray(facturasRes.data) ? facturasRes.data : [];
+
+        // 2. Obtener pagos del usuario
+        const pagosRes = await defensiveFetch<PagoData[]>(`/api/pagos`);
+        const pagos = Array.isArray(pagosRes.data) ? pagosRes.data : [];
+
+        // 3. Generar notificaciones sintéticas
+        let tempNotificaciones: Notificacion[] = [];
+        let notifId = 1;
+
+        // Facturas pendientes
+        facturas.forEach((factura) => {
+          if (["PENDIENTE", "POR_PAGAR"].includes(factura.estado?.toUpperCase())) {
+            tempNotificaciones.push({
+              id: notifId++,
+              title: "Factura Pendiente",
+              message: `Tienes una factura de $${factura.monto} sin pagar.`,
+              type: "warning",
+              timestamp: new Date().toLocaleString(),
+              read: false,
+              usuarioId: usuario.id,
+            });
+          }
+        });
+
+        // Pagos
+        pagos.forEach((pago) => {
+          const estado = pago.estado?.toUpperCase();
+          if (["VERIFICADO", "APROBADO"].includes(estado)) {
+            tempNotificaciones.push({
+              id: notifId++,
+              title: "Pago Aprobado",
+              message: `Tu pago de $${pago.monto} ha sido validado.`,
+              type: "success",
+              timestamp: pago.fecha || new Date().toLocaleString(),
+              read: false,
+              usuarioId: usuario.id,
+            });
+          } else if (estado === "RECHAZADO") {
+            tempNotificaciones.push({
+              id: notifId++,
+              title: "Pago Rechazado",
+              message: `Tu pago de $${pago.monto} fue rechazado.`,
+              type: "error",
+              timestamp: pago.fecha || new Date().toLocaleString(),
+              read: false,
+              usuarioId: usuario.id,
+            });
+          } else if (estado === "PENDIENTE") {
+            tempNotificaciones.push({
+              id: notifId++,
+              title: "Pago Pendiente",
+              message: `Verificando pago de $${pago.monto}...`,
+              type: "info",
+              timestamp: pago.fecha || new Date().toLocaleString(),
+              read: false,
+              usuarioId: usuario.id,
+            });
+          }
+        });
+
+        // Ordenar: warning (deudas) primero
+        tempNotificaciones.sort((a, b) => {
+          if (a.type === "warning" && b.type !== "warning") return -1;
+          if (a.type !== "warning" && b.type === "warning") return 1;
+          return 0;
+        });
+
+        setNotificaciones(tempNotificaciones);
+      } catch (err) {
+        setNotificaciones([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarNotificaciones();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuario]);
 
   // Marcar como leída
   const handleMarcarLeida = (id: number) => {
