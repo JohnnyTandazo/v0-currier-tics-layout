@@ -115,7 +115,7 @@ export default function ClientDashboard({ onViewTracking, onClientViewChange }: 
       // ✅ OBTENER FACTURAS PARA CALCULAR DEUDA REAL
       let deudaTotal = 0
       try {
-        const idLimpio = String(userStored.id).split(':')[0].trim()
+        const idLimpio = userStored.id; // Usar el ID tal cual está
         const facturasResponse = await fetch(`${apiUrl}/api/facturas/usuario/${idLimpio}`, {
           method: "GET",
           headers: withAuthHeaders({ "Content-Type": "application/json" }),
