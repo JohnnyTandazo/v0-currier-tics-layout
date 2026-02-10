@@ -83,7 +83,7 @@ export default function AdminDashboard() { // <--- Nombre actualizado
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://backend-tesis-spring-production.up.railway.app"
       
-      const res = await fetch(`${apiUrl}/api/auth/register`, {
+      const res = await fetch(`${apiUrl}/api/usuarios/registro`, {
         method: "POST",
         headers: withAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(formData)
