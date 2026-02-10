@@ -536,7 +536,7 @@ export function Pagos() {
                 />
               </div>
 
-              {/* Payment Method */}
+              {/* Payment Method - MODIFICADO */}
               <div className="space-y-2">
                 <Label htmlFor="metodo" className="text-foreground">
                   Método de Pago
@@ -550,11 +550,72 @@ export function Pagos() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="TRANSFERENCIA">Transferencia Bancaria</SelectItem>
-                    <SelectItem value="TARJETA_CREDITO">Tarjeta de Crédito/Débito</SelectItem>
-                    <SelectItem value="EFECTIVO">Efectivo en Oficina</SelectItem>
                     <SelectItem value="CHEQUE">Cheque o Depósito Bancario</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* NUEVO: Información de Cuentas Bancarias */}
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mt-2 mb-2">
+                <h3 className="text-blue-800 font-bold mb-3 text-sm flex items-center gap-2">
+                  ℹ️ Cuentas Autorizadas para Depósito/Transferencia:
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Banco Pichincha */}
+                  <div className="bg-white p-3 rounded-md shadow-sm border border-gray-200">
+                    <div className="font-bold text-gray-800 flex items-center gap-1 mb-2 border-b pb-1">
+                      <span role="img" aria-label="banco">🏦</span> Pichincha
+                    </div>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Cte:</span> 
+                        <span className="font-mono text-gray-900">1234567890</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Aho:</span> 
+                        <span className="font-mono text-gray-900">0987654321</span>
+                      </div>
+                      <div className="pt-1 text-center font-medium text-blue-900 text-[10px]">Titular: Currier TICS</div>
+                    </div>
+                  </div>
+
+                  {/* Banco Guayaquil */}
+                  <div className="bg-white p-3 rounded-md shadow-sm border border-gray-200">
+                    <div className="font-bold text-gray-800 flex items-center gap-1 mb-2 border-b pb-1">
+                      <span role="img" aria-label="banco">🏦</span> Guayaquil
+                    </div>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Cte:</span> 
+                        <span className="font-mono text-gray-900">1122334455</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Aho:</span> 
+                        <span className="font-mono text-gray-900">5544332211</span>
+                      </div>
+                      <div className="pt-1 text-center font-medium text-blue-900 text-[10px]">Titular: Currier TICS</div>
+                    </div>
+                  </div>
+
+                  {/* Banco del Austro */}
+                  <div className="bg-white p-3 rounded-md shadow-sm border border-gray-200">
+                    <div className="font-bold text-gray-800 flex items-center gap-1 mb-2 border-b pb-1">
+                      <span role="img" aria-label="banco">🏦</span> Austro
+                    </div>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Cte:</span> 
+                        <span className="font-mono text-gray-900">9988776655</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Aho:</span> 
+                        <span className="font-mono text-gray-900">5566778899</span>
+                      </div>
+                      <div className="pt-1 text-center font-medium text-blue-900 text-[10px]">Titular: Currier TICS</div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Reference Number */}
